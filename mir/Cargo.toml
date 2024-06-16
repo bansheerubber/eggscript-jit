@@ -1,0 +1,9 @@
+[package]
+name = "eggscript_mir"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+eggscript_interpreter = { path = "../interpreter/" }
+eggscript_types = { path = "../types/" }

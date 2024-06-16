@@ -1,0 +1,35 @@
+WHITESPACE_WITHOUT_NEWLINE = _{ " " | "\t" }
+WHITESPACE = _{ WHITESPACE_WITHOUT_NEWLINE | NEWLINE }
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
+
+alpha = _{ 'a'..'z' | 'A'..'Z' }
+non_zero_digit = _{ '1'..'9' }
+digit = _{ '0'..'9' }
+special = _{ "_" }
+
+integer_literal = _{ (non_zero_digit ~ digit+) | digit }
+float_literal = _{ digit+ ~ "." ~ digit+ }
+number_literal = @{ float_literal | integer_literal }
+string_literal = @{ (("'") ~ ('\x00'..'\x26' | '\x28'..'\xFF')* ~ ("'")) | (("\"") ~ ('\x00'..'\x21' | '\x23'..'\xFF')* ~ ("\"")) }
+
+ident = _{ (alpha | special) ~ (alpha | digit | special)* }
+variable_ident = _{ "%" ~ ident }
+
+assignment_operator = { "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "&&=" | "||=" | "=" }
+
+field_ident = @{ ident }
+field_variable_ident = @{ variable_ident }
+field_access = { (field_ident | field_variable_ident) ~ ("." ~ field_ident)* }
+
+variable_assignment = { field_access ~ assignment_operator ~ (number_literal | string_literal) }
+
+variable_declaration_ident = @{ variable_ident }
+variable_declaration_type_ident = @{ ident }
+variable_declaration = { variable_declaration_ident ~ (":" ~ variable_declaration_type_ident)? ~ ("=" ~ (math))? }
+
+math = { number_literal | string_literal }
+
+line = _{ (variable_assignment ~ ";") }
+body = _{ line }
+
+program = _{ SOI ~ body+ ~ EOI }

@@ -1,0 +1,12 @@
+[package]
+name = "eggscript_ast"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+colored = "2.1.0"
+eggscript_mir = { path = "../mir" }
+eggscript_types = { path = "../types" }
+pest = "2.7.10"
+pest_derive = "2.7.10"
