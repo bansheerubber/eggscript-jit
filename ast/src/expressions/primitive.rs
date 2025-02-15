@@ -18,9 +18,9 @@ impl Expression {
 
 		let symbol = pair.as_str().to_string();
 		Ok(P::new(Expression {
-			info: ExpressionInfo::Primitive(symbol),
+			info: ExpressionInfo::Primitive(eggscript_types::Primitive::Double, symbol),
 			span: pair.as_span().into(),
-			ty: Some(*type_handle),
+			ty: Some(type_handle),
 		}))
 	}
 
@@ -35,9 +35,9 @@ impl Expression {
 
 		let symbol = pair.as_str().to_string();
 		Ok(P::new(Expression {
-			info: ExpressionInfo::Primitive(symbol),
+			info: ExpressionInfo::Primitive(eggscript_types::Primitive::String, symbol),
 			span: pair.as_span().into(),
-			ty: Some(*type_handle),
+			ty: Some(type_handle),
 		}))
 	}
 }

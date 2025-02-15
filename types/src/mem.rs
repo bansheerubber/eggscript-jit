@@ -20,3 +20,11 @@ impl<T: ?Sized> Deref for P<T> {
 		&self.ptr
 	}
 }
+
+impl<T> Clone for P<T> {
+	fn clone(&self) -> Self {
+		P {
+			ptr: self.ptr.clone(),
+		}
+	}
+}

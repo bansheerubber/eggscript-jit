@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Primitive {
 	Char,
 	Double,
@@ -97,12 +97,23 @@ impl TypeStore {
 		self.types.push(ty);
 	}
 
-	pub fn name_to_type(&self, name: &str) -> Option<&Type> {
-		let handle = self.name_to_type_handle(name)?;
-		self.types.get(*handle)
+	pub fn create_unknown(&mut self) -> TypeHandle {
+		let type_handle = self.types.len();
+		let ty = Type::Unknown {
+			id: type_handle,
+		};
+
+		self.types.push(ty);
+
+		return type_handle;
 	}
 
-	pub fn name_to_type_handle(&self, name: &str) -> Option<&TypeHandle> {
-		self.name_to_type.get(name)
+	pub fn name_to_type(&self, name: &str) -> Option<&Type> {
+		let handle = self.name_to_type_handle(name)?;
+		self.types.get(handle)
+	}
+
+	pub fn name_to_type_handle(&self, name: &str) -> Option<TypeHandle> {
+		self.name_to_type.get(name).copied()
 	}
 }

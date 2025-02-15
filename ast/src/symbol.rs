@@ -32,6 +32,7 @@ impl From<pest::Span<'_>> for Span {
 #[derive(Clone, Debug)]
 pub struct Ident {
 	name: Symbol,
+	#[allow(dead_code)]
 	span: Span,
 }
 

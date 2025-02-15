@@ -7,7 +7,7 @@ use crate::parser::Rule;
 use crate::{AstContext, BinaryOperator, Ident};
 
 impl Expression {
-	pub(crate) fn parse_variable_assignment(
+	pub(crate) fn parse_variable_declaration(
 		context: &mut AstContext,
 		pair: Pair<Rule>,
 	) -> Result<P<Expression>> {
@@ -17,18 +17,23 @@ impl Expression {
 			.next()
 			.context("Could not get variable name")?
 			.as_str();
-
 		symbol = symbol.trim();
 
-		let variable_ident = Ident::new(symbol, span);
+		let ty = if let Rule::type_ident = inner
+			.peek()
+			.context("Could not peek variable type")?
+			.as_rule()
+		{
+			let type_pair = inner.next().context("Could not get variable type")?;
+			context
+				.type_store
+				.name_to_type_handle(type_pair.as_str())
+				.context("Could not unwrap variable type")?
+		} else {
+			context.type_store.create_unknown()
+		};
 
-		let operator = BinaryOperator::parse_assignment(
-			inner
-				.next()
-				.context("Could not get assignment operator")?
-				.as_str(),
-		)
-		.context("Could not parse assignment operator")?;
+		let variable_ident = Ident::new(symbol, span);
 
 		let expression = Expression::parse_pair(
 			context,
@@ -37,9 +42,9 @@ impl Expression {
 		.context("Could not parse pair")??;
 
 		Ok(P::new(Expression {
-			ty: expression.ty,
-			info: ExpressionInfo::Assign(variable_ident, operator, expression),
+			info: ExpressionInfo::Assign(variable_ident, BinaryOperator::Equal, expression),
 			span,
+			ty: Some(ty),
 		}))
 	}
 }

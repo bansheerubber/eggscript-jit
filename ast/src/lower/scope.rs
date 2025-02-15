@@ -1,5 +1,5 @@
 use anyhow::Result;
-use eggscript_mir::{UnitHandle, ValueHandle};
+use eggscript_mir::{UnitHandle, Value};
 use eggscript_types::P;
 
 use crate::expressions::{Expression, ExpressionInfo};
@@ -9,7 +9,7 @@ impl AstLowerContext {
 	pub(crate) fn lower_scope(
 		&mut self,
 		scope: &P<Expression>,
-	) -> Result<(Vec<UnitHandle>, Option<ValueHandle>)> {
+	) -> Result<(Vec<UnitHandle>, Option<P<Value>>)> {
 		let ExpressionInfo::Scope(block) = &scope.info else {
 			unreachable!();
 		};

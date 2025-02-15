@@ -15,21 +15,74 @@ string_literal = @{ (("'") ~ ('\x00'..'\x26' | '\x28'..'\xFF')* ~ ("'")) | (("\"
 ident = _{ (alpha | special) ~ (alpha | digit | special)* }
 variable_ident = _{ "%" ~ ident }
 
+addition = { "+" }
+subtraction = { "-" }
+multiplication = { "*" }
+division = { "/" }
+modulus = { "%" }
+bitwise_and = { "&" }
+bitwise_or = { "|" }
+bitwise_xor = { "^" }
+shift_left = { "<<" }
+shift_right = { ">>" }
+logical_and = { "&&" }
+logical_or = { "||" }
+equals = { "==" }
+not_equals = { "!=" }
+greater_than = { ">" }
+less_than = { "<" }
+greater_than_equal_to = { ">=" }
+less_than_equal_to = { "<=" }
+binary_operator = _{ addition | subtraction | multiplication | division | modulus | bitwise_and | bitwise_or | bitwise_xor | shift_left | shift_right | logical_and | logical_or | equals | not_equals | greater_than_equal_to | less_than_equal_to | greater_than | less_than }
+
+negative = { "-" }
+logical_not = { "!" }
+bitwise_not = { "~" }
+unary_operator = _{ negative | logical_not | bitwise_not }
+
 assignment_operator = { "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "&&=" | "||=" | "=" }
 
 field_ident = @{ ident }
 field_variable_ident = @{ variable_ident }
-field_access = { (field_ident | field_variable_ident) ~ ("." ~ field_ident)* }
+field_access = { field_variable_ident ~ ("." ~ field_ident)* }
 
-variable_assignment = { field_access ~ assignment_operator ~ (number_literal | string_literal) }
+path_ident = @{ ident }
+path_access = { path_ident ~ ("::" ~ path_ident)* }
+
+type_ident = @{ ident }
+
+variable_assignment = { field_access ~ assignment_operator ~ math }
+
+function_call_args = { (math ~ ",")* ~ math? }
+function_call = { (path_access | field_access) ~ "(" ~ function_call_args ~ ")" }
+
+operand = _{ number_literal | string_literal | function_call | field_access }
+primary = _{ operand | ( "(" ~ math ~ ")") }
+math = { unary_operator? ~ primary ~ (binary_operator ~ unary_operator? ~ primary)* }
+
+expression = _{ function_call | variable_assignment | math }
 
 variable_declaration_ident = @{ variable_ident }
-variable_declaration_type_ident = @{ ident }
-variable_declaration = { variable_declaration_ident ~ (":" ~ variable_declaration_type_ident)? ~ ("=" ~ (math))? }
+variable_declaration = { variable_declaration_ident ~ (":" ~ type_ident)? ~ ("=" ~ (math))? }
 
-math = { number_literal | string_literal }
+block_inner = { body* }
+if_block = { "if" ~ "(" ~ expression ~ ")" ~ "{" ~ block_inner ~ "}" ~ (else_if_block | else_block)? }
+else_if_block = { "else if" ~ "(" ~ expression ~ ")" ~ "{" ~ block_inner ~ "}" ~ (else_if_block | else_block)? }
+else_block = { "else" ~ "{" ~ block_inner ~ "}" }
 
-line = _{ (variable_assignment ~ ";") }
-body = _{ line }
+while_block = { "while" ~ "(" ~ expression ~ ")" ~ "{" ~ block_inner ~ "}" }
+loop_block = { "loop" ~ "{" ~ block_inner ~ "}" }
+for_block = { "for" ~ "(" ~ variable_declaration ~ ";" ~ expression ~ ";" ~ expression ~ ")" ~ "{" ~ block_inner ~ "}" }
+
+function_arg_variable_ident = { variable_ident }
+function_arg = { function_arg_variable_ident ~ ":" ~ type_ident }
+function_arg_list = { (function_arg ~ ",")* ~ function_arg? }
+function_name = { ident }
+function_declaration = { "function" ~ function_name ~ "(" ~ function_arg_list ~ ")" ~ ":" ~ type_ident ~ "{" ~ block_inner ~ "}" }
+
+return_statement = { "return" ~ math? ~ ";" }
+
+line = _{ return_statement | (variable_declaration ~ ";") | (expression ~ ";") }
+body = _{ function_declaration | if_block | while_block | loop_block | for_block | line }
 
 program = _{ SOI ~ body+ ~ EOI }

@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.7", features = ["derive"] }
+colored = "2.1.0"
 eggscript_ast = { path = "../ast" }
 eggscript_interpreter = { path = "../interpreter" }
 eggscript_mir = { path = "../mir" }
+eggscript_types = { path = "../types" }

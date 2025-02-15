@@ -1,9 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
-use eggscript_ast::{compile_file, parse_file};
-use eggscript_interpreter::Interpreter;
+use colored::Colorize;
+use eggscript_ast::{compile_expression, compile_function, parse_file, Function, Program};
+use eggscript_interpreter::{Instruction, Interpreter};
 use eggscript_mir::EggscriptLowerContext;
-use std::ops::Deref;
+use eggscript_types::P;
+use std::{ops::Deref, rc::Rc};
 
 #[derive(Parser)]
 #[command(name = "eggscript")]
@@ -16,11 +18,42 @@ enum Args {
 #[command(author, version, about, long_about = None)]
 struct RunArgs;
 
-fn main() -> Result<()> {
-	let expressions = parse_file("test.egg")?;
-	println!("{}", expressions.deref());
+fn lower_function(program: P<Program>, function: &P<Function>) -> Result<Vec<Instruction>> {
+	let (ast_context, units) = compile_function(
+		function.clone(),
+		program,
+		function.scope.as_ref().unwrap().clone(),
+	)?;
 
-	let (ast_context, units) = compile_file(expressions)?;
+	println!(
+		"{} '{}', {}",
+		"Function".yellow(),
+		function.name.cyan(),
+		function.id
+	);
+
+	for unit in units.iter() {
+		println!("{}", unit);
+	}
+
+	let mut eggscript_context: EggscriptLowerContext = ast_context.into();
+	let instructions = eggscript_context.lower_units(units)?;
+
+	Ok(instructions)
+}
+
+fn main() -> Result<()> {
+	let program = parse_file("test.egg")?;
+
+	println!("{}", program.global_scope.deref());
+
+	for function in program.functions.iter() {
+		println!("{}", function.deref());
+	}
+
+	println!("{}", "Global program".yellow());
+
+	let (ast_context, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 	for unit in units.iter() {
 		println!("{}", unit);
 	}
@@ -32,10 +65,37 @@ fn main() -> Result<()> {
 		println!("{:?}", instruction);
 	}
 
+	println!("");
+
 	let mut interpreter = Interpreter::new(instructions);
+
+	for function in program.functions.iter() {
+		if function.scope.is_some() {
+			let instructions = lower_function(program.clone(), function)?;
+			for instruction in instructions.iter() {
+				println!("{:?}", instruction);
+			}
+			println!("");
+
+			interpreter.add_function(eggscript_interpreter::Function::new_eggscript_function(
+				function.id,
+				function.arguments.len(),
+				instructions,
+				&function.name,
+			));
+		} else {
+			interpreter.add_function(eggscript_interpreter::Function::new_native(
+				function.id,
+				function.arguments.len(),
+				Rc::new(eggscript_interpreter::runtime::print::print_double),
+				&function.name,
+			));
+		}
+	}
+
 	interpreter.run();
 
-	println!("\nResults:");
+	println!("Results:");
 
 	interpreter.print_stack();
 

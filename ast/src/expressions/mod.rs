@@ -1,10 +1,22 @@
 mod block;
+mod else_block;
 mod expression;
+mod field_access;
+mod for_block;
+mod function_call;
+mod function_declaration;
+mod if_block;
+mod math;
 mod pretty_print;
 mod primitive;
+mod return_statement;
 mod scope;
 mod variable_assignment;
+mod variable_declaration;
+mod while_block;
 
 pub use block::Block;
 pub use expression::Expression;
 pub use expression::ExpressionInfo;
+pub use function_declaration::Function;
+pub use function_declaration::FunctionArgument;

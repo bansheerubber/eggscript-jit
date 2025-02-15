@@ -1,1 +1,3 @@
-pub mod eggscript;
+mod eggscript;
+
+pub use eggscript::EggscriptLowerContext;

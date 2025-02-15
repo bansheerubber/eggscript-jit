@@ -175,9 +175,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "colored",
  "eggscript_ast",
  "eggscript_interpreter",
  "eggscript_mir",
+ "eggscript_types",
 ]
 
 [[package]]

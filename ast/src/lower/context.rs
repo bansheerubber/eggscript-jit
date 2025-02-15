@@ -1,13 +1,16 @@
 use anyhow::Result;
 use eggscript_mir::{
-	EggscriptLowerContext, Unit, UnitHandle, ValueHandle,
+	EggscriptLowerContext, MIRInfo, Unit, UnitHandle, UnitStore, Value, ValueStore, MIR,
 };
-use eggscript_mir::{UnitStore, ValueStore};
 use eggscript_types::P;
 
-use crate::expressions::{Expression, ExpressionInfo};
+use crate::{
+	expressions::{Block, Expression, ExpressionInfo},
+	Function, Program,
+};
 
 pub struct AstLowerContext {
+	pub program: P<Program>,
 	pub unit_store: UnitStore,
 	pub value_store: ValueStore,
 }
@@ -19,8 +22,9 @@ impl Into<EggscriptLowerContext> for AstLowerContext {
 }
 
 impl AstLowerContext {
-	pub fn new() -> AstLowerContext {
+	pub fn new(program: P<Program>) -> AstLowerContext {
 		AstLowerContext {
+			program,
 			unit_store: UnitStore::new(),
 			value_store: ValueStore::new(),
 		}
@@ -29,18 +33,68 @@ impl AstLowerContext {
 	pub fn lower_expression(
 		&mut self,
 		expression: &P<Expression>,
-	) -> Result<(Vec<UnitHandle>, Option<ValueHandle>)> {
+	) -> Result<(Vec<UnitHandle>, Option<P<Value>>)> {
 		match expression.info {
 			ExpressionInfo::Assign(_, _, _) => self.lower_variable_assignment(expression),
-			ExpressionInfo::Primitive(_) => todo!(),
+			ExpressionInfo::BinaryOperation(_, _, _) => self.lower_binary_operation(expression),
+			ExpressionInfo::Else(_) => unreachable!(),
+			ExpressionInfo::FieldAccess(_) => self.lower_field_access(expression),
+			ExpressionInfo::For(_, _, _, _) => self.lower_for_block(expression),
+			ExpressionInfo::FunctionCall(_, _) => self.lower_function_call(expression),
+			ExpressionInfo::If(_, _, _) => self.lower_if_block(expression),
+			ExpressionInfo::Primitive(_, _) => self.lower_primitive(expression),
+			ExpressionInfo::Return(_) => self.lower_return_statement(expression),
 			ExpressionInfo::Scope(_) => self.lower_scope(expression),
+			ExpressionInfo::While(_, _) => self.lower_while_block(expression),
+			_ => unimplemented!("{:?}", expression.info),
 		}
+	}
+
+	pub fn lower_block(&mut self, block: &P<Block>) -> Result<(Vec<UnitHandle>, Option<P<Value>>)> {
+		let mut units: Vec<UnitHandle> = vec![];
+		for expression in block.expressions.iter() {
+			let (mut more_units, _) = self.lower_expression(expression)?;
+			units.append(&mut more_units);
+		}
+
+		Ok((units, None))
 	}
 }
 
-pub fn compile_file(expression: P<Expression>) -> Result<(AstLowerContext, Vec<Unit>)> {
-	let mut lower_context = AstLowerContext::new();
-	lower_context.lower_expression(&expression)?;
-	let units = lower_context.unit_store.take_units();
+pub fn compile_function(
+	function: P<Function>,
+	program: P<Program>,
+	expression: P<Expression>,
+) -> Result<(AstLowerContext, Vec<Unit>)> {
+	let mut lower_context = AstLowerContext::new(program);
+
+	let mut mir = vec![];
+	let mut index = 0;
+	for argument in function.arguments.iter() {
+		let (value, _) = lower_context
+			.value_store
+			.new_location(&argument.name, argument.ty.unwrap());
+
+		mir.push(MIR::new(MIRInfo::Allocate(value, Some(index))));
+		index += 1;
+	}
+
+	let argument_unit = lower_context
+		.unit_store
+		.new_unit(mir, eggscript_mir::Transition::Next);
+
+	let (mut units, _) = lower_context.lower_expression(&expression)?;
+	units.insert(0, argument_unit);
+	let units = lower_context.unit_store.take_units(units);
+	Ok((lower_context, units))
+}
+
+pub fn compile_expression(
+	program: P<Program>,
+	expression: P<Expression>,
+) -> Result<(AstLowerContext, Vec<Unit>)> {
+	let mut lower_context = AstLowerContext::new(program);
+	let (units, _) = lower_context.lower_expression(&expression)?;
+	let units = lower_context.unit_store.take_units(units);
 	Ok((lower_context, units))
 }
