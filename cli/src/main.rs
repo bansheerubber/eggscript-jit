@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 use eggscript_ast::{compile_expression, compile_function, parse_file, Function, Program};
-use eggscript_interpreter::{Instruction, Interpreter};
+use eggscript_interpreter::{get_native_function_mapping, Instruction, Interpreter};
 use eggscript_mir::EggscriptLowerContext;
 use eggscript_types::P;
-use std::{ops::Deref, rc::Rc};
+use std::ops::Deref;
 
 #[cfg(test)]
 mod integration_tests;
@@ -78,6 +78,8 @@ fn main() -> Result<()> {
 
 	let mut interpreter = Interpreter::new(instructions);
 
+	let native_function_mapping = get_native_function_mapping();
+
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
 			let instructions = lower_function(program.clone(), function, true)?;
@@ -96,7 +98,7 @@ fn main() -> Result<()> {
 			interpreter.add_function(eggscript_interpreter::Function::new_native(
 				function.id,
 				function.arguments.len(),
-				Rc::new(eggscript_interpreter::runtime::print::print_double),
+				native_function_mapping.get(&function.name).unwrap().clone(),
 				&function.name,
 			));
 		}

@@ -1,17 +1,14 @@
 use anyhow::Result;
 use eggscript_ast::{compile_expression, parse_string};
-use eggscript_interpreter::{Interpreter, Value};
+use eggscript_interpreter::runtime::print::{clear_test_print_buffer, get_test_print_buffer};
+use eggscript_interpreter::{get_test_native_function_mapping, Interpreter};
 use eggscript_mir::EggscriptLowerContext;
-use std::rc::Rc;
-use std::sync::Mutex;
 
 use crate::lower_function;
 
-static TEST_PRINT_BUFFER: Mutex<Vec<String>> = Mutex::new(vec![]);
-
 fn assert_buffer(expected: Vec<&str>) {
-	let buffer = TEST_PRINT_BUFFER.lock().unwrap().clone();
-	TEST_PRINT_BUFFER.lock().unwrap().clear();
+	let buffer = get_test_print_buffer();
+	clear_test_print_buffer();
 
 	assert!(
 		buffer.iter().eq(expected.iter()),
@@ -19,21 +16,6 @@ fn assert_buffer(expected: Vec<&str>) {
 		expected,
 		buffer,
 	);
-}
-
-fn test_print(values: Vec<Value>) -> Value {
-	if values.len() == 0 {
-		return Value::Null;
-	}
-
-	match values.first().unwrap() {
-		Value::Boolean(value) => TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value)),
-		Value::Double(value) => TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value)),
-		Value::Integer(value) => TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value)),
-		Value::Null => TEST_PRINT_BUFFER.lock().unwrap().push("null".into()),
-	}
-
-	Value::Null
 }
 
 fn run_file(contents: &str) -> Result<()> {
@@ -44,6 +26,8 @@ fn run_file(contents: &str) -> Result<()> {
 	let instructions = eggscript_context.lower_units(units)?;
 
 	let mut interpreter = Interpreter::new(instructions);
+
+	let native_function_mapping = get_test_native_function_mapping();
 
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
@@ -58,7 +42,7 @@ fn run_file(contents: &str) -> Result<()> {
 			interpreter.add_function(eggscript_interpreter::Function::new_native(
 				function.id,
 				function.arguments.len(),
-				Rc::new(test_print),
+				native_function_mapping.get(&function.name).unwrap().clone(),
 				&function.name,
 			));
 		}
