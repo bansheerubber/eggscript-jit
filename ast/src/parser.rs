@@ -65,10 +65,14 @@ impl Program {
 	}
 }
 
-pub fn parse_file(file_name: &str) -> Result<P<Program>> {
-	let file = std::fs::read_to_string(file_name).context("Could not read file")?;
-	match PestParser::parse(Rule::program, &file) {
+pub fn parse_string(contents: &str) -> Result<P<Program>> {
+	match PestParser::parse(Rule::program, &contents) {
 		Ok(pairs) => Ok(P::new(Expression::parse_program(pairs)?)),
 		Err(error) => panic!("{:?}", error),
 	}
+}
+
+pub fn parse_file(file_name: &str) -> Result<P<Program>> {
+	let contents = std::fs::read_to_string(file_name).context("Could not read file")?;
+	return parse_string(&contents);
 }

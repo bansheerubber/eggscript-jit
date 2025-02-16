@@ -13,6 +13,7 @@ pub use lower::compile_function;
 pub use operators::BinaryOperator;
 pub use operators::UnaryOperator;
 pub use parser::parse_file;
+pub use parser::parse_string;
 pub use parser::Program;
 pub use symbol::Ident;
 pub use symbol::Span;

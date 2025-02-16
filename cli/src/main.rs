@@ -7,6 +7,9 @@ use eggscript_mir::EggscriptLowerContext;
 use eggscript_types::P;
 use std::{ops::Deref, rc::Rc};
 
+#[cfg(test)]
+mod integration_tests;
+
 #[derive(Parser)]
 #[command(name = "eggscript")]
 #[command(bin_name = "eggscript")]
@@ -18,22 +21,28 @@ enum Args {
 #[command(author, version, about, long_about = None)]
 struct RunArgs;
 
-fn lower_function(program: P<Program>, function: &P<Function>) -> Result<Vec<Instruction>> {
+fn lower_function(
+	program: P<Program>,
+	function: &P<Function>,
+	debug: bool,
+) -> Result<Vec<Instruction>> {
 	let (ast_context, units) = compile_function(
 		function.clone(),
 		program,
 		function.scope.as_ref().unwrap().clone(),
 	)?;
 
-	println!(
-		"{} '{}', {}",
-		"Function".yellow(),
-		function.name.cyan(),
-		function.id
-	);
+	if debug {
+		println!(
+			"{} '{}', {}",
+			"Function".yellow(),
+			function.name.cyan(),
+			function.id
+		);
 
-	for unit in units.iter() {
-		println!("{}", unit);
+		for unit in units.iter() {
+			println!("{}", unit);
+		}
 	}
 
 	let mut eggscript_context: EggscriptLowerContext = ast_context.into();
@@ -71,7 +80,7 @@ fn main() -> Result<()> {
 
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
-			let instructions = lower_function(program.clone(), function)?;
+			let instructions = lower_function(program.clone(), function, true)?;
 			for instruction in instructions.iter() {
 				println!("{:?}", instruction);
 			}
