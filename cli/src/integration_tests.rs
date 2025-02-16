@@ -82,3 +82,10 @@ fn for_loop1() -> Result<()> {
 	assert_buffer(vec!["1024"]);
 	Ok(())
 }
+
+#[test]
+fn math1() -> Result<()> {
+	run_file(include_str!("./tests/math1.egg"))?;
+	assert_buffer(vec!["50159"]);
+	Ok(())
+}

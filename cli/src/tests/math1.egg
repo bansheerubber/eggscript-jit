@@ -1,0 +1,9 @@
+%a = 5;
+%b = 1;
+
+function x(): double {
+	return 100;
+}
+
+%result = %a * x() * x() + %b * x() + 59;
+printDouble(%result);
