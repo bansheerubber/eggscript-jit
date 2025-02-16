@@ -1,0 +1,10 @@
+function pow(%base: double, %exp: double): double {
+	%result = 1;
+	for (%i = 0; %i < %exp; %i += 1) {
+		%result *= %base;
+	}
+
+	return %result;
+}
+
+printDouble(pow(2, 10));

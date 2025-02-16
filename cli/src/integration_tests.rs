@@ -9,7 +9,19 @@ use crate::lower_function;
 
 static TEST_PRINT_BUFFER: Mutex<Vec<String>> = Mutex::new(vec![]);
 
-pub fn test_print(values: Vec<Value>) -> Value {
+fn assert_buffer(expected: Vec<&str>) {
+	let buffer = TEST_PRINT_BUFFER.lock().unwrap().clone();
+	TEST_PRINT_BUFFER.lock().unwrap().clear();
+
+	assert!(
+		buffer.iter().eq(expected.iter()),
+		"expected = {:?}, buffer = {:?}",
+		expected,
+		buffer,
+	);
+}
+
+fn test_print(values: Vec<Value>) -> Value {
 	if values.len() == 0 {
 		return Value::Null;
 	}
@@ -24,9 +36,8 @@ pub fn test_print(values: Vec<Value>) -> Value {
 	Value::Null
 }
 
-#[test]
-fn recursion1() -> Result<()> {
-	let program = parse_string(include_str!("./tests/recursion1.egg"))?;
+fn run_file(contents: &str) -> Result<()> {
+	let program = parse_string(contents)?;
 	let (ast_content, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
 	let mut eggscript_context: EggscriptLowerContext = ast_content.into();
@@ -55,9 +66,19 @@ fn recursion1() -> Result<()> {
 
 	interpreter.run();
 
-	let buffer = TEST_PRINT_BUFFER.lock().unwrap();
-	let expected = vec!["6765"];
-	assert!(buffer.iter().eq(expected.iter()));
+	Ok(())
+}
 
+#[test]
+fn recursion1() -> Result<()> {
+	run_file(include_str!("./tests/recursion1.egg"))?;
+	assert_buffer(vec!["6765"]);
+	Ok(())
+}
+
+#[test]
+fn for_loop1() -> Result<()> {
+	run_file(include_str!("./tests/for_loop1.egg"))?;
+	assert_buffer(vec!["1024"]);
 	Ok(())
 }
