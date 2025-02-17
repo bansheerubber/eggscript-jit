@@ -1,16 +1,17 @@
 use anyhow::{Context, Result};
 use eggscript_interpreter::{Instruction, RelativeStackAddress};
-use eggscript_types::{TypeStore, P};
+use eggscript_types::{TypeHandle, TypeStore, P};
 use std::{
 	collections::HashMap,
 	ops::Deref,
 	sync::{Arc, Mutex},
 };
 
-use crate::{MIRInfo, Transition, Unit, UnitHandle, Value, ValueStore, MIR};
+use crate::{MIRInfo, Span, Transition, Unit, UnitHandle, Value, ValueStore, MIR};
 
 pub struct EggscriptLowerContext {
 	allocations: Vec<P<Value>>,
+	file_name: String,
 	jump_instructions: Vec<usize>,
 	type_store: Arc<Mutex<TypeStore>>,
 	unit_to_instruction: HashMap<UnitHandle, usize>,
@@ -21,9 +22,14 @@ pub struct EggscriptLowerContext {
 }
 
 impl EggscriptLowerContext {
-	pub fn new(type_store: Arc<Mutex<TypeStore>>, value_store: ValueStore) -> Self {
+	pub fn new(
+		type_store: Arc<Mutex<TypeStore>>,
+		value_store: ValueStore,
+		file_name: &str,
+	) -> Self {
 		EggscriptLowerContext {
 			allocations: Vec::new(),
+			file_name: file_name.to_string(),
 			jump_instructions: Vec::new(),
 			type_store,
 			unit_to_instruction: HashMap::new(),
@@ -35,7 +41,7 @@ impl EggscriptLowerContext {
 
 	pub fn compile_to_eggscript(&mut self, units: Vec<Unit>) -> Result<Vec<Instruction>> {
 		self.build_value_dependencies(&units);
-		self.type_check(&units);
+		self.type_check_units(&units);
 		return self.lower_units(units);
 	}
 
@@ -94,54 +100,86 @@ impl EggscriptLowerContext {
 		Ok(instructions)
 	}
 
-	fn type_check(&mut self, units: &Vec<Unit>) {
+	fn type_check_units(&mut self, units: &Vec<Unit>) {
 		let type_store = self.type_store.lock().unwrap();
 		for unit in units.iter() {
 			for mir in unit.mir.iter() {
 				match &mir.info {
 					MIRInfo::Allocate(_, _) => {}
 					MIRInfo::BinaryOperation(result, left, right, _) => {
-						assert!(
-							type_store.are_types_compatible(result.ty(), left.ty()),
-							"result not compatible with left"
+						self.type_check(
+							&type_store,
+							result.ty(),
+							left.ty(),
+							&mir.span,
+							"result not compatible with left",
 						);
-						assert!(
-							type_store.are_types_compatible(result.ty(), right.ty()),
-							"result not compatible with right"
+
+						self.type_check(
+							&type_store,
+							result.ty(),
+							right.ty(),
+							&mir.span,
+							"result not compatible with right",
 						);
-						assert!(
-							type_store.are_types_compatible(left.ty(), right.ty()),
-							"left not compatible with right"
+
+						self.type_check(
+							&type_store,
+							left.ty(),
+							right.ty(),
+							&mir.span,
+							"left not compatible with right",
 						);
 					}
 					MIRInfo::CallFunction(function_name, _, arguments, _) => {
 						let mut index = 0;
 						let function = type_store.get_function(function_name).unwrap();
 						for argument in arguments.iter() {
-							assert!(type_store.are_types_compatible(
+							self.type_check(
+								&type_store,
 								argument.ty(),
-								*function.argument_types.get(index).unwrap()
-							));
+								*function.argument_types.get(index).unwrap(),
+								&mir.span,
+								&format!("argument #{} not compatible with value", index),
+							);
 							index += 1;
 						}
 					}
 					MIRInfo::StoreLiteral(lvalue, rvalue) => {
-						assert!(
-							type_store.are_types_compatible(
-								lvalue.ty(),
-								rvalue.get_type_from_type_store(&type_store)
-							),
-							"lvalue not compatible with rvalue"
+						self.type_check(
+							&type_store,
+							lvalue.ty(),
+							rvalue.get_type_from_type_store(&type_store),
+							&mir.span,
+							"lvaluve not compatible with rvalue",
 						);
 					}
 					MIRInfo::StoreValue(lvalue, rvalue) => {
-						assert!(
-							type_store.are_types_compatible(lvalue.ty(), rvalue.ty()),
-							"lvalue not compatible with rvalue"
+						self.type_check(
+							&type_store,
+							lvalue.ty(),
+							rvalue.ty(),
+							&mir.span,
+							"lvaluve not compatible with rvalue",
 						);
 					}
 				}
 			}
+		}
+	}
+
+	fn type_check(
+		&self,
+		type_store: &TypeStore,
+		type1: TypeHandle,
+		type2: TypeHandle,
+		span: &Span,
+		message: &str,
+	) {
+		if !type_store.are_types_compatible(type1, type2) {
+			println!("{}", message);
+			println!("{}", self.print_span(span));
+			panic!();
 		}
 	}
 
@@ -372,5 +410,10 @@ impl EggscriptLowerContext {
 				}
 			}
 		}
+	}
+
+	fn print_span(&self, span: &Span) -> String {
+		let contents = std::fs::read_to_string(&self.file_name).unwrap();
+		contents[span.start() as usize..span.end() as usize].into()
 	}
 }

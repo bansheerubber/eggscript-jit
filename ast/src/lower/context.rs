@@ -17,7 +17,11 @@ pub struct AstLowerContext {
 
 impl Into<EggscriptLowerContext> for AstLowerContext {
 	fn into(self) -> EggscriptLowerContext {
-		EggscriptLowerContext::new(self.program.type_store.clone(), self.value_store)
+		EggscriptLowerContext::new(
+			self.program.type_store.clone(),
+			self.value_store,
+			&self.program.file_name,
+		)
 	}
 }
 
@@ -75,7 +79,10 @@ pub fn compile_function(
 			.value_store
 			.new_location(&argument.name, argument.ty.unwrap());
 
-		mir.push(MIR::new(MIRInfo::Allocate(value, Some(index))));
+		mir.push(MIR::new(
+			MIRInfo::Allocate(value, Some(index)),
+			argument.span,
+		));
 		index += 1;
 	}
 

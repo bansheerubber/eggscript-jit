@@ -38,6 +38,7 @@ pub(crate) struct PestParser<'a> {
 }
 
 pub struct Program {
+	pub file_name: String,
 	pub function_name_to_function: HashMap<String, P<Function>>,
 	pub functions: Vec<P<Function>>,
 	pub global_scope: P<Expression>,
@@ -67,9 +68,10 @@ impl Program {
 	}
 }
 
-pub fn parse_string(contents: &str) -> Result<P<Program>> {
+pub fn parse_string(contents: &str, file_name: &str) -> Result<P<Program>> {
 	match PestParser::parse(Rule::program, &contents) {
 		Ok(pairs) => Ok(P::new(Expression::parse_program(
+			file_name,
 			Arc::new(Mutex::new(TypeStore::new())),
 			pairs,
 		)?)),
@@ -79,5 +81,5 @@ pub fn parse_string(contents: &str) -> Result<P<Program>> {
 
 pub fn parse_file(file_name: &str) -> Result<P<Program>> {
 	let contents = std::fs::read_to_string(file_name).context("Could not read file")?;
-	return parse_string(&contents);
+	return parse_string(&contents, file_name);
 }

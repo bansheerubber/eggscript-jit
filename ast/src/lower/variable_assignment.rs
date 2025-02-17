@@ -35,7 +35,10 @@ impl AstLowerContext {
 
 		let mut mir: Vec<MIR> = Vec::new();
 		if is_new {
-			mir.push(MIR::new(MIRInfo::Allocate(variable_value.clone(), None)));
+			mir.push(MIR::new(
+				MIRInfo::Allocate(variable_value.clone(), None),
+				name.span(),
+			));
 		}
 
 		let mut units = vec![];
@@ -43,22 +46,22 @@ impl AstLowerContext {
 		if operator == &BinaryOperator::Equal {
 			match rvalue.deref() {
 				Value::Location { .. } => {
-					mir.push(MIR::new(MIRInfo::StoreValue(
-						variable_value.clone(),
-						rvalue,
-					)));
+					mir.push(MIR::new(
+						MIRInfo::StoreValue(variable_value.clone(), rvalue),
+						&expression.span,
+					));
 				}
 				Value::Primitive { value, .. } => {
-					mir.push(MIR::new(MIRInfo::StoreLiteral(
-						variable_value.clone(),
-						value.clone(),
-					)));
+					mir.push(MIR::new(
+						MIRInfo::StoreLiteral(variable_value.clone(), value.clone()),
+						&expression.span,
+					));
 				}
 				Value::Temp { .. } => {
-					mir.push(MIR::new(MIRInfo::StoreValue(
-						variable_value.clone(),
-						rvalue,
-					)));
+					mir.push(MIR::new(
+						MIRInfo::StoreValue(variable_value.clone(), rvalue),
+						&expression.span,
+					));
 				}
 			}
 
@@ -66,17 +69,20 @@ impl AstLowerContext {
 			units.push(self.unit_store.new_unit(mir, Transition::Next));
 		} else {
 			let result = self.value_store.new_temp(variable_value.ty());
-			mir.push(MIR::new(MIRInfo::BinaryOperation(
-				result.clone(),
-				variable_value.clone(),
-				rvalue.clone(),
-				operator.into(),
-			)));
+			mir.push(MIR::new(
+				MIRInfo::BinaryOperation(
+					result.clone(),
+					variable_value.clone(),
+					rvalue.clone(),
+					operator.into(),
+				),
+				&expression.span,
+			));
 
-			mir.push(MIR::new(MIRInfo::StoreValue(
-				variable_value.clone(),
-				result,
-			)));
+			mir.push(MIR::new(
+				MIRInfo::StoreValue(variable_value.clone(), result),
+				name.span(),
+			));
 
 			units.append(&mut rvalue_units);
 			units.push(self.unit_store.new_unit(mir, Transition::Next));

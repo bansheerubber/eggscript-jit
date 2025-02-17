@@ -47,6 +47,7 @@ pub enum ExpressionInfo {
 
 impl Expression {
 	pub(crate) fn parse_program(
+		file_name: &str,
 		type_store: Arc<Mutex<TypeStore>>,
 		pairs: Pairs<Rule>,
 	) -> Result<Program> {
@@ -74,6 +75,7 @@ impl Expression {
 		}
 
 		let mut program = Program {
+			file_name: file_name.to_string(),
 			function_name_to_function,
 			functions,
 			global_scope: Expression::new_scope(global_scope, Span::new(0, 0))?,

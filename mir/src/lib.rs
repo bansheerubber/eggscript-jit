@@ -2,6 +2,7 @@ mod lower;
 mod mir;
 mod operators;
 mod primitive;
+mod span;
 mod unit;
 mod value;
 
@@ -11,6 +12,7 @@ pub use mir::Transition;
 pub use mir::MIR;
 pub use operators::BinaryOperator;
 pub use primitive::PrimitiveValue;
+pub use span::Span;
 pub use unit::Unit;
 pub use unit::UnitHandle;
 pub use unit::UnitStore;

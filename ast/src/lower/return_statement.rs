@@ -25,17 +25,20 @@ impl AstLowerContext {
 				Value::Location { ty, .. } => {
 					let temp = self.value_store.new_temp(*ty);
 					units.push(self.unit_store.new_unit(
-						vec![MIR::new(MIRInfo::StoreValue(
-							temp.clone(),
-							value.clone().unwrap(),
-						))],
+						vec![MIR::new(
+							MIRInfo::StoreValue(temp.clone(), value.clone().unwrap()),
+							expression.span,
+						)],
 						Transition::Next,
 					));
 				}
 				Value::Primitive { ty, value, .. } => {
 					let temp = self.value_store.new_temp(*ty);
 					units.push(self.unit_store.new_unit(
-						vec![MIR::new(MIRInfo::StoreLiteral(temp.clone(), value.clone()))],
+						vec![MIR::new(
+							MIRInfo::StoreLiteral(temp.clone(), value.clone()),
+							expression.span,
+						)],
 						Transition::Next,
 					));
 				}

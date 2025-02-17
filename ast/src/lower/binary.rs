@@ -25,12 +25,10 @@ impl AstLowerContext {
 		let result = self.value_store.new_temp(ty); // TODO fill out type handle correctly
 
 		let unit = self.unit_store.new_unit(
-			vec![MIR::new(MIRInfo::BinaryOperation(
-				result.clone(),
-				left_value,
-				right_value,
-				operator.into(),
-			))],
+			vec![MIR::new(
+				MIRInfo::BinaryOperation(result.clone(), left_value, right_value, operator.into()),
+				expression.span,
+			)],
 			Transition::Next,
 		);
 

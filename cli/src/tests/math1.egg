@@ -5,5 +5,5 @@ function x(): double {
 	return 100;
 }
 
-%result = %a * x() * x() + %b * x() + 59;
+%result: double = %a * x() * x() + %b * x() + 59;
 printDouble(%result);

@@ -18,6 +18,13 @@ impl Span {
 	pub fn end(&self) -> u32 {
 		self.end
 	}
+
+	pub fn combine(&self, other: &Span) -> Span {
+		Span {
+			start: self.start,
+			end: other.end,
+		}
+	}
 }
 
 impl From<pest::Span<'_>> for Span {
@@ -26,6 +33,18 @@ impl From<pest::Span<'_>> for Span {
 			start: value.start() as u32,
 			end: value.end() as u32,
 		}
+	}
+}
+
+impl Into<eggscript_mir::Span> for Span {
+	fn into(self) -> eggscript_mir::Span {
+		eggscript_mir::Span::new(self.start(), self.end())
+	}
+}
+
+impl Into<eggscript_mir::Span> for &Span {
+	fn into(self) -> eggscript_mir::Span {
+		eggscript_mir::Span::new(self.start(), self.end())
 	}
 }
 
@@ -46,5 +65,9 @@ impl Ident {
 
 	pub fn name(&self) -> &str {
 		&self.name
+	}
+
+	pub fn span(&self) -> &Span {
+		&self.span
 	}
 }

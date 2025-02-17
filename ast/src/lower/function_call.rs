@@ -32,7 +32,10 @@ impl AstLowerContext {
 					Value::Location { ty, .. } => {
 						let temp = self.value_store.new_temp(*ty);
 						extra_unit = Some(self.unit_store.new_unit(
-							vec![MIR::new(MIRInfo::StoreValue(temp.clone(), value.clone()))],
+							vec![MIR::new(
+								MIRInfo::StoreValue(temp.clone(), value.clone()),
+								name.span(),
+							)],
 							Transition::Next,
 						));
 
@@ -41,7 +44,10 @@ impl AstLowerContext {
 					Value::Primitive { ty, value, .. } => {
 						let temp = self.value_store.new_temp(*ty);
 						extra_unit = Some(self.unit_store.new_unit(
-							vec![MIR::new(MIRInfo::StoreLiteral(temp.clone(), value.clone()))],
+							vec![MIR::new(
+								MIRInfo::StoreLiteral(temp.clone(), value.clone()),
+								name.span(),
+							)],
 							Transition::Next,
 						));
 
@@ -63,12 +69,15 @@ impl AstLowerContext {
 		let result = self.value_store.new_temp(function.ty);
 
 		units.push(self.unit_store.new_unit(
-			vec![MIR::new(MIRInfo::CallFunction(
-				function.name.clone(),
-				function.id,
-				argument_values,
-				result.clone(),
-			))],
+			vec![MIR::new(
+				MIRInfo::CallFunction(
+					function.name.clone(),
+					function.id,
+					argument_values,
+					result.clone(),
+				),
+				name.span(),
+			)],
 			Transition::Next,
 		));
 

@@ -1,13 +1,14 @@
 use eggscript_types::P;
 use std::ops::Deref;
 
-use crate::{BinaryOperator, PrimitiveValue, UnitHandle, Value};
+use crate::{BinaryOperator, PrimitiveValue, Span, UnitHandle, Value};
 
 const INDENT: &str = "  ";
 
 #[derive(Debug)]
 pub struct MIR {
 	pub(crate) info: MIRInfo,
+	pub(crate) span: Span,
 }
 
 impl std::fmt::Display for MIR {
@@ -66,8 +67,15 @@ impl std::fmt::Display for MIR {
 }
 
 impl MIR {
-	pub fn new(info: MIRInfo) -> MIR {
-		MIR { info }
+	pub fn new<T: Into<Span>>(info: MIRInfo, span: T) -> MIR {
+		MIR {
+			info,
+			span: span.into(),
+		}
+	}
+
+	pub fn check_type() {
+
 	}
 }
 
