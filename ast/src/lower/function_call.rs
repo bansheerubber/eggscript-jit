@@ -64,6 +64,7 @@ impl AstLowerContext {
 
 		units.push(self.unit_store.new_unit(
 			vec![MIR::new(MIRInfo::CallFunction(
+				function.name.clone(),
 				function.id,
 				argument_values,
 				result.clone(),

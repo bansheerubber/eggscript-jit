@@ -35,6 +35,12 @@ impl Expression {
 				let lhs = lhs?;
 				let rhs = rhs?;
 
+				let ty = if lhs.ty == rhs.ty {
+					lhs.ty
+				} else {
+					Some(context.borrow().type_store.lock().unwrap().create_unknown())
+				};
+
 				Ok(P::new(Expression {
 					span: Span::new(lhs.span.start(), rhs.span.end()),
 					info: ExpressionInfo::BinaryOperation(
@@ -43,15 +49,7 @@ impl Expression {
 						BinaryOperator::parse_binary(op.as_str())
 							.context("Could not parse binary operator")?,
 					),
-					ty: Some(
-						context
-							.borrow()
-							.type_store
-							.lock()
-							.unwrap()
-							.name_to_type_handle("double")
-							.unwrap(),
-					), // TODO fix this later
+					ty,
 				}))
 			})
 			.parse(pair.into_inner());

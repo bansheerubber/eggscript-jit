@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use eggscript_types::P;
+use eggscript_types::{Type, P};
 use pest::iterators::Pair;
 
 use crate::expressions::{Expression, ExpressionInfo};
@@ -29,10 +29,19 @@ impl Expression {
 			);
 		}
 
+		let ty = context
+			.type_store
+			.lock()
+			.unwrap()
+			.create_type(Type::FunctionReturn {
+				id: 0,
+				function_name: name.into(),
+			});
+
 		Ok(P::new(Expression {
 			info: ExpressionInfo::FunctionCall(Ident::new(name, name_span), arguments),
 			span,
-			ty: None,
+			ty: Some(ty),
 		}))
 	}
 }

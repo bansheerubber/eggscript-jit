@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 mod context;
 mod expressions;
 mod lower;

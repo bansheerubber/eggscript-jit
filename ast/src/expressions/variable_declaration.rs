@@ -19,21 +19,20 @@ impl Expression {
 			.as_str();
 		symbol = symbol.trim();
 
+		let type_store = context.type_store.lock().unwrap();
+
 		let ty = if let Rule::type_ident = inner
 			.peek()
 			.context("Could not peek variable type")?
 			.as_rule()
 		{
 			let type_pair = inner.next().context("Could not get variable type")?;
-			context
-				.type_store
-				.lock()
-				.unwrap()
-				.name_to_type_handle(type_pair.as_str())
-				.context("Could not unwrap variable type")?
+			type_store.name_to_type_handle(type_pair.as_str())
 		} else {
-			context.type_store.lock().unwrap().create_unknown()
+			None
 		};
+
+		drop(type_store);
 
 		let variable_ident = Ident::new(symbol, span);
 
@@ -43,10 +42,18 @@ impl Expression {
 		)
 		.context("Could not parse pair")??;
 
+		let ty = if let None = ty && let Some(expression_ty) = expression.ty {
+			Some(expression_ty)
+		} else if let None = ty {
+			Some(context.type_store.lock().unwrap().create_unknown())
+		} else {
+			ty
+		};
+
 		Ok(P::new(Expression {
 			info: ExpressionInfo::Assign(variable_ident, BinaryOperator::Equal, expression),
 			span,
-			ty: Some(ty),
+			ty,
 		}))
 	}
 }

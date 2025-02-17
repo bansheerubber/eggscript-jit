@@ -140,6 +140,15 @@ impl Expression {
 			})
 			.collect::<Vec<Result<P<Expression>>>>();
 
+		context.type_store.lock().unwrap().create_function_type(
+			name,
+			arguments
+				.iter()
+				.map(|argument| argument.ty.unwrap())
+				.collect::<Vec<TypeHandle>>(),
+			return_type,
+		);
+
 		Ok(P::new(Function {
 			arguments,
 			id,

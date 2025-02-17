@@ -114,9 +114,16 @@ impl EggscriptLowerContext {
 							"left not compatible with right"
 						);
 					}
-					MIRInfo::CallFunction(_, _, _) => {
-						// TODO we need to get function type information here somehow
-						// include it in TypeStore?
+					MIRInfo::CallFunction(function_name, _, arguments, _) => {
+						let mut index = 0;
+						let function = type_store.get_function(function_name).unwrap();
+						for argument in arguments.iter() {
+							assert!(type_store.are_types_compatible(
+								argument.ty(),
+								*function.argument_types.get(index).unwrap()
+							));
+							index += 1;
+						}
 					}
 					MIRInfo::StoreLiteral(lvalue, rvalue) => {
 						assert!(
@@ -153,7 +160,7 @@ impl EggscriptLowerContext {
 							.or_default()
 							.push(lvalue.id());
 					}
-					MIRInfo::CallFunction(_, arguments, result) => {
+					MIRInfo::CallFunction(_, _, arguments, result) => {
 						for argument in arguments.iter() {
 							self.value_used_by
 								.entry(argument.id())
@@ -289,7 +296,7 @@ impl EggscriptLowerContext {
 
 				Ok(instructions)
 			}
-			MIRInfo::CallFunction(function_handle, arguments, result) => {
+			MIRInfo::CallFunction(_, function_handle, arguments, result) => {
 				let mut instructions = vec![];
 				for argument in arguments.iter() {
 					match argument.deref() {

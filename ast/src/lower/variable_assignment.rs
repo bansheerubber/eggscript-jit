@@ -65,7 +65,7 @@ impl AstLowerContext {
 			units.append(&mut rvalue_units);
 			units.push(self.unit_store.new_unit(mir, Transition::Next));
 		} else {
-			let result = self.value_store.new_temp(variable_value.ty()); // TODO this seems wrong
+			let result = self.value_store.new_temp(variable_value.ty());
 			mir.push(MIR::new(MIRInfo::BinaryOperation(
 				result.clone(),
 				variable_value.clone(),

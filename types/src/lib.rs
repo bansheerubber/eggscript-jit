@@ -1,6 +1,8 @@
+mod function_type;
 mod mem;
 mod types;
 
+pub use function_type::FunctionType;
 pub use mem::P;
 pub use types::KnownTypeInfo;
 pub use types::Primitive;

@@ -80,7 +80,7 @@ impl Expression {
 			type_store,
 		};
 
-		let type_store = context.type_store.lock().unwrap();
+		let mut type_store = context.type_store.lock().unwrap();
 		program.add_native_function(
 			vec![FunctionArgument {
 				name: "value".into(),
@@ -90,6 +90,10 @@ impl Expression {
 			"printDouble",
 			type_store.name_to_type_handle("double").unwrap(),
 		);
+
+		let argument_types = vec![type_store.name_to_type_handle("double").unwrap()];
+		let return_type = type_store.name_to_type_handle("double").unwrap();
+		type_store.create_function_type("printDouble", argument_types, return_type);
 
 		Ok(program)
 	}

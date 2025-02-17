@@ -26,12 +26,13 @@ impl std::fmt::Display for MIR {
 					rvalue.deref(),
 				))
 			}
-			MIRInfo::CallFunction(function_handle, arguments, result) => {
+			MIRInfo::CallFunction(function_name, function_handle, arguments, result) => {
 				f.write_fmt(format_args!(
-					"{}{} = {}(",
+					"{}{} = {}[{}](",
 					INDENT,
 					result.deref(),
-					function_handle
+					function_name,
+					function_handle,
 				))?;
 
 				let mut index = 0;
@@ -74,7 +75,7 @@ impl MIR {
 pub enum MIRInfo {
 	Allocate(P<Value>, Option<usize>),
 	BinaryOperation(P<Value>, P<Value>, P<Value>, BinaryOperator),
-	CallFunction(usize, Vec<P<Value>>, P<Value>),
+	CallFunction(String, usize, Vec<P<Value>>, P<Value>),
 	StoreLiteral(P<Value>, PrimitiveValue),
 	StoreValue(P<Value>, P<Value>),
 }
