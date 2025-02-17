@@ -47,6 +47,8 @@ impl Expression {
 						context
 							.borrow()
 							.type_store
+							.lock()
+							.unwrap()
 							.name_to_type_handle("double")
 							.unwrap(),
 					), // TODO fix this later

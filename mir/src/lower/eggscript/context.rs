@@ -1,13 +1,18 @@
 use anyhow::{Context, Result};
 use eggscript_interpreter::{Instruction, RelativeStackAddress};
-use eggscript_types::P;
-use std::{collections::HashMap, ops::Deref};
+use eggscript_types::{TypeStore, P};
+use std::{
+	collections::HashMap,
+	ops::Deref,
+	sync::{Arc, Mutex},
+};
 
 use crate::{MIRInfo, Transition, Unit, UnitHandle, Value, ValueStore, MIR};
 
 pub struct EggscriptLowerContext {
 	allocations: Vec<P<Value>>,
 	jump_instructions: Vec<usize>,
+	type_store: Arc<Mutex<TypeStore>>,
 	unit_to_instruction: HashMap<UnitHandle, usize>,
 	value_used_by: HashMap<usize, Vec<usize>>,
 	value_to_stack: HashMap<usize, usize>,
@@ -16,10 +21,11 @@ pub struct EggscriptLowerContext {
 }
 
 impl EggscriptLowerContext {
-	pub fn new(value_store: ValueStore) -> Self {
+	pub fn new(type_store: Arc<Mutex<TypeStore>>, value_store: ValueStore) -> Self {
 		EggscriptLowerContext {
 			allocations: Vec::new(),
 			jump_instructions: Vec::new(),
+			type_store,
 			unit_to_instruction: HashMap::new(),
 			value_used_by: HashMap::new(),
 			value_to_stack: HashMap::new(),
@@ -27,44 +33,13 @@ impl EggscriptLowerContext {
 		}
 	}
 
-	fn build_value_dependencies(&mut self, units: &Vec<Unit>) {
-		for unit in units.iter() {
-			for mir in unit.mir.iter() {
-				match &mir.info {
-					MIRInfo::BinaryOperation(lvalue, operand1, operand2, _) => {
-						self.value_used_by
-							.entry(operand1.id())
-							.or_default()
-							.push(lvalue.id());
-
-						self.value_used_by
-							.entry(operand2.id())
-							.or_default()
-							.push(lvalue.id());
-					}
-					MIRInfo::CallFunction(_, arguments, result) => {
-						for argument in arguments.iter() {
-							self.value_used_by
-								.entry(argument.id())
-								.or_default()
-								.push(result.id());
-						}
-					}
-					MIRInfo::StoreValue(lvalue, rvalue) => {
-						self.value_used_by
-							.entry(rvalue.id())
-							.or_default()
-							.push(lvalue.id());
-					}
-					_ => {}
-				}
-			}
-		}
+	pub fn compile_to_eggscript(&mut self, units: Vec<Unit>) -> Result<Vec<Instruction>> {
+		self.build_value_dependencies(&units);
+		self.type_check(&units);
+		return self.lower_units(units);
 	}
 
-	pub fn lower_units(&mut self, units: Vec<Unit>) -> Result<Vec<Instruction>> {
-		self.build_value_dependencies(&units);
-
+	fn lower_units(&mut self, units: Vec<Unit>) -> Result<Vec<Instruction>> {
 		let mut instructions = vec![];
 		for unit in units.iter() {
 			let start = instructions.len();
@@ -117,6 +92,85 @@ impl EggscriptLowerContext {
 		instructions.insert(0, Instruction::Reserve(self.allocations.len()));
 
 		Ok(instructions)
+	}
+
+	fn type_check(&mut self, units: &Vec<Unit>) {
+		let type_store = self.type_store.lock().unwrap();
+		for unit in units.iter() {
+			for mir in unit.mir.iter() {
+				match &mir.info {
+					MIRInfo::Allocate(_, _) => {}
+					MIRInfo::BinaryOperation(result, left, right, _) => {
+						assert!(
+							type_store.are_types_compatible(result.ty(), left.ty()),
+							"result not compatible with left"
+						);
+						assert!(
+							type_store.are_types_compatible(result.ty(), right.ty()),
+							"result not compatible with right"
+						);
+						assert!(
+							type_store.are_types_compatible(left.ty(), right.ty()),
+							"left not compatible with right"
+						);
+					}
+					MIRInfo::CallFunction(_, _, _) => {
+						// TODO we need to get function type information here somehow
+						// include it in TypeStore?
+					}
+					MIRInfo::StoreLiteral(lvalue, rvalue) => {
+						assert!(
+							type_store.are_types_compatible(
+								lvalue.ty(),
+								rvalue.get_type_from_type_store(&type_store)
+							),
+							"lvalue not compatible with rvalue"
+						);
+					}
+					MIRInfo::StoreValue(lvalue, rvalue) => {
+						assert!(
+							type_store.are_types_compatible(lvalue.ty(), rvalue.ty()),
+							"lvalue not compatible with rvalue"
+						);
+					}
+				}
+			}
+		}
+	}
+
+	fn build_value_dependencies(&mut self, units: &Vec<Unit>) {
+		for unit in units.iter() {
+			for mir in unit.mir.iter() {
+				match &mir.info {
+					MIRInfo::BinaryOperation(lvalue, operand1, operand2, _) => {
+						self.value_used_by
+							.entry(operand1.id())
+							.or_default()
+							.push(lvalue.id());
+
+						self.value_used_by
+							.entry(operand2.id())
+							.or_default()
+							.push(lvalue.id());
+					}
+					MIRInfo::CallFunction(_, arguments, result) => {
+						for argument in arguments.iter() {
+							self.value_used_by
+								.entry(argument.id())
+								.or_default()
+								.push(result.id());
+						}
+					}
+					MIRInfo::StoreValue(lvalue, rvalue) => {
+						self.value_used_by
+							.entry(rvalue.id())
+							.or_default()
+							.push(lvalue.id());
+					}
+					_ => {}
+				}
+			}
+		}
 	}
 
 	fn lower_unit(&mut self, unit: &Unit, instruction_index: usize) -> Result<Vec<Instruction>> {

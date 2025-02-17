@@ -17,6 +17,8 @@ impl Expression {
 
 		let type_handle = context
 			.type_store
+			.lock()
+			.unwrap()
 			.name_to_type_handle("double")
 			.context("Could not get 'double' literal type")?;
 

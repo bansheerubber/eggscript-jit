@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
-use eggscript_types::{TypeHandle, P};
+use eggscript_types::{TypeHandle, TypeStore, P};
 use pest::iterators::{Pair, Pairs};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use crate::expressions::Block;
 use crate::parser::{Program, Rule};
@@ -45,8 +46,11 @@ pub enum ExpressionInfo {
 }
 
 impl Expression {
-	pub(crate) fn parse_program(pairs: Pairs<Rule>) -> Result<Program> {
-		let mut context = AstContext::new();
+	pub(crate) fn parse_program(
+		type_store: Arc<Mutex<TypeStore>>,
+		pairs: Pairs<Rule>,
+	) -> Result<Program> {
+		let mut context = AstContext::new(type_store.clone());
 
 		let mut functions = vec![];
 		let mut function_name_to_function = HashMap::new();
@@ -73,16 +77,18 @@ impl Expression {
 			function_name_to_function,
 			functions,
 			global_scope: Expression::new_scope(global_scope, Span::new(0, 0))?,
+			type_store,
 		};
 
+		let type_store = context.type_store.lock().unwrap();
 		program.add_native_function(
 			vec![FunctionArgument {
 				name: "value".into(),
 				span: Span::new(0, 0),
-				ty: context.type_store.name_to_type_handle("double"),
+				ty: type_store.name_to_type_handle("double"),
 			}],
 			"printDouble",
-			context.type_store.name_to_type_handle("double").unwrap(),
+			type_store.name_to_type_handle("double").unwrap(),
 		);
 
 		Ok(program)

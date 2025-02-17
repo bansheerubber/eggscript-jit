@@ -111,7 +111,11 @@ impl Expression {
 				.context("Could not unwrap function arg type")?
 				.as_str();
 
-			let ty = context.type_store.name_to_type_handle(type_name);
+			let ty = context
+				.type_store
+				.lock()
+				.unwrap()
+				.name_to_type_handle(type_name);
 
 			arguments.push(FunctionArgument { name, span, ty });
 		}
@@ -119,6 +123,8 @@ impl Expression {
 		let return_type = pairs.next().context("Could not get return type")?.as_str();
 		let return_type = context
 			.type_store
+			.lock()
+			.unwrap()
 			.name_to_type_handle(return_type)
 			.context("Could not find return type")?;
 

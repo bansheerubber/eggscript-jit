@@ -1,3 +1,5 @@
+use eggscript_types::{TypeHandle, TypeStore};
+
 #[derive(Clone, Debug)]
 pub enum PrimitiveValue {
 	Double(f64),
@@ -21,6 +23,16 @@ impl std::fmt::Display for PrimitiveValue {
 			PrimitiveValue::Double(value) => f.write_fmt(format_args!("{}", value)),
 			PrimitiveValue::Integer(value) => f.write_fmt(format_args!("{}", value)),
 			PrimitiveValue::String(value) => f.write_fmt(format_args!("{}", value)),
+		}
+	}
+}
+
+impl PrimitiveValue {
+	pub fn get_type_from_type_store(&self, type_store: &TypeStore) -> TypeHandle {
+		match self {
+			PrimitiveValue::Double(_) => type_store.name_to_type_handle("double").unwrap(),
+			PrimitiveValue::Integer(_) => type_store.name_to_type_handle("integer").unwrap(),
+			PrimitiveValue::String(_) => type_store.name_to_type_handle("string").unwrap(),
 		}
 	}
 }

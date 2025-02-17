@@ -116,4 +116,8 @@ impl TypeStore {
 	pub fn name_to_type_handle(&self, name: &str) -> Option<TypeHandle> {
 		self.name_to_type.get(name).copied()
 	}
+
+	pub fn are_types_compatible(&self, type1: TypeHandle, type2: TypeHandle) -> bool {
+		return type1 == type2;
+	}
 }

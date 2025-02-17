@@ -1,10 +1,11 @@
 use anyhow::{Context, Result};
-use eggscript_types::{TypeHandle, P};
+use eggscript_types::{TypeHandle, TypeStore, P};
 use pest::iterators::Pairs;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
 use pest_derive::Parser;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use crate::expressions::Expression;
 use crate::{Function, FunctionArgument, Span};
@@ -40,6 +41,7 @@ pub struct Program {
 	pub function_name_to_function: HashMap<String, P<Function>>,
 	pub functions: Vec<P<Function>>,
 	pub global_scope: P<Expression>,
+	pub type_store: Arc<Mutex<TypeStore>>,
 }
 
 impl Program {
@@ -67,7 +69,10 @@ impl Program {
 
 pub fn parse_string(contents: &str) -> Result<P<Program>> {
 	match PestParser::parse(Rule::program, &contents) {
-		Ok(pairs) => Ok(P::new(Expression::parse_program(pairs)?)),
+		Ok(pairs) => Ok(P::new(Expression::parse_program(
+			Arc::new(Mutex::new(TypeStore::new())),
+			pairs,
+		)?)),
 		Err(error) => panic!("{:?}", error),
 	}
 }

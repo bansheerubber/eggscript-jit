@@ -17,7 +17,7 @@ pub struct AstLowerContext {
 
 impl Into<EggscriptLowerContext> for AstLowerContext {
 	fn into(self) -> EggscriptLowerContext {
-		EggscriptLowerContext::new(self.value_store)
+		EggscriptLowerContext::new(self.program.type_store.clone(), self.value_store)
 	}
 }
 

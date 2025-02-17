@@ -27,10 +27,12 @@ impl Expression {
 			let type_pair = inner.next().context("Could not get variable type")?;
 			context
 				.type_store
+				.lock()
+				.unwrap()
 				.name_to_type_handle(type_pair.as_str())
 				.context("Could not unwrap variable type")?
 		} else {
-			context.type_store.create_unknown()
+			context.type_store.lock().unwrap().create_unknown()
 		};
 
 		let variable_ident = Ident::new(symbol, span);

@@ -23,7 +23,7 @@ fn run_file(contents: &str) -> Result<()> {
 	let (ast_content, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
 	let mut eggscript_context: EggscriptLowerContext = ast_content.into();
-	let instructions = eggscript_context.lower_units(units)?;
+	let instructions = eggscript_context.compile_to_eggscript(units)?;
 
 	let mut interpreter = Interpreter::new(instructions);
 
