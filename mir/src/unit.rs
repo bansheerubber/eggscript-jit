@@ -6,9 +6,9 @@ use crate::{Transition, MIR};
 pub type UnitHandle = usize;
 
 pub struct Unit {
-	pub(crate) id: usize,
-	pub(crate) mir: Vec<MIR>,
-	pub(crate) transition: Transition,
+	pub id: usize,
+	pub mir: Vec<MIR>,
+	pub transition: Transition,
 }
 
 impl Unit {
@@ -90,6 +90,10 @@ impl UnitStore {
 			.transition = transition;
 
 		Ok(())
+	}
+
+	pub fn get_unit(&self, unit: &UnitHandle) -> Option<&Unit> {
+		self.unit_id_to_unit.get(unit)
 	}
 
 	pub fn combine_units(&mut self, units: Vec<UnitHandle>) -> Vec<usize> {

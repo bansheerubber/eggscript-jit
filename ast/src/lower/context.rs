@@ -1,6 +1,6 @@
 use anyhow::Result;
 use eggscript_mir::{
-	EggscriptLowerContext, MIRInfo, Unit, UnitHandle, UnitStore, Value, ValueStore, MIR,
+	EggscriptLowerContext, MIRInfo, Transition, Unit, UnitHandle, UnitStore, Value, ValueStore, MIR,
 };
 use eggscript_types::P;
 
@@ -92,6 +92,26 @@ pub fn compile_function(
 
 	let (mut units, _) = lower_context.lower_expression(&expression)?;
 	units.insert(0, argument_unit);
+
+	let mut return_count = 0;
+	for unit in units.iter() {
+		let Some(unit) = lower_context.unit_store.get_unit(unit) else {
+			continue;
+		};
+
+		if let Transition::Return(_) = unit.transition {
+			return_count += 1;
+		}
+	}
+
+	if return_count == 0 {
+		units.push(
+			lower_context
+				.unit_store
+				.new_unit(vec![], eggscript_mir::Transition::Return(None)),
+		);
+	}
+
 	let units = lower_context.unit_store.take_units(units);
 	Ok((lower_context, units))
 }
