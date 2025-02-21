@@ -52,14 +52,26 @@ impl Program {
 		name: &str,
 		return_type: TypeHandle,
 	) {
+		let argument_types = arguments
+			.iter()
+			.map(|argument| argument.ty.unwrap())
+			.collect::<Vec<TypeHandle>>();
+
+		let ty = self.type_store.lock().unwrap().create_function_type(
+			name,
+			argument_types,
+			Some(return_type),
+		);
+
 		let id = self.functions.len();
 		let function = P::new(Function {
 			arguments,
 			id,
 			name: name.to_string(),
+			return_ty: Some(return_type),
 			scope: None,
 			span: Span::new(0, 0),
-			ty: return_type,
+			ty,
 		});
 
 		self.functions.push(function.clone());

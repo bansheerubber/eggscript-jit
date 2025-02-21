@@ -78,7 +78,8 @@ function_arg_variable_ident = { variable_ident }
 function_arg = { function_arg_variable_ident ~ ":" ~ type_ident }
 function_arg_list = { (function_arg ~ ",")* ~ function_arg? }
 function_name = { ident }
-function_declaration = { "function" ~ function_name ~ "(" ~ function_arg_list ~ ")" ~ ":" ~ type_ident ~ "{" ~ block_inner ~ "}" }
+function_return_type = { ":" ~ type_ident }
+function_declaration = { "function" ~ function_name ~ "(" ~ function_arg_list ~ ")" ~ function_return_type? ~ "{" ~ block_inner ~ "}" }
 
 return_statement = { "return" ~ math? ~ ";" }
 

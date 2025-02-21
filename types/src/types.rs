@@ -15,6 +15,7 @@ pub enum Primitive {
 	I32,
 	I64,
 	String,
+	Null,
 }
 
 #[derive(Debug)]
@@ -95,6 +96,12 @@ impl TypeStore {
 			name: "string".into(),
 		});
 
+		type_store.create_type(Type::Known {
+			id: 0,
+			info: KnownTypeInfo::Primitive(Primitive::Null),
+			name: "null".into(),
+		});
+
 		return type_store;
 	}
 
@@ -115,17 +122,18 @@ impl TypeStore {
 		&mut self,
 		name: &str,
 		argument_types: Vec<TypeHandle>,
-		return_type: TypeHandle,
-	) {
-		self.functions.insert(
-			name.into(),
-			FunctionType {
-				argument_types,
-				id: 0, // TODO ugh
-				name: name.into(),
-				return_type,
-			},
-		);
+		return_type: Option<TypeHandle>,
+	) -> FunctionType {
+		let ty = FunctionType {
+			argument_types,
+			id: 0, // TODO ugh
+			name: name.into(),
+			return_type,
+		};
+
+		self.functions.insert(name.into(), ty.clone());
+
+		return ty;
 	}
 
 	pub fn create_unknown(&mut self) -> TypeHandle {
@@ -150,15 +158,15 @@ impl TypeStore {
 		self.name_to_type.get(name).copied()
 	}
 
-	pub fn resolve_type(&self, ty: TypeHandle) -> TypeHandle {
+	pub fn resolve_type(&self, ty: TypeHandle) -> Option<TypeHandle> {
 		let ty = self.types.get(ty).unwrap();
 		match ty {
 			Type::FunctionReturn { function_name, .. } => {
 				let function = self.functions.get(function_name).unwrap();
 				function.return_type
 			}
-			Type::Known { id, .. } => *id,
-			Type::Unknown { id } => *id, // TODO
+			Type::Known { id, .. } => Some(*id),
+			Type::Unknown { id } => Some(*id), // TODO
 		}
 	}
 

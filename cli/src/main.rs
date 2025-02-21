@@ -46,7 +46,7 @@ fn lower_function(
 	}
 
 	let mut eggscript_context: EggscriptLowerContext = ast_context.into();
-	let instructions = eggscript_context.compile_to_eggscript(units)?;
+	let instructions = eggscript_context.compile_to_eggscript(units, Some(function.ty.clone()))?;
 
 	Ok(instructions)
 }
@@ -68,7 +68,7 @@ fn main() -> Result<()> {
 	}
 
 	let mut eggscript_context: EggscriptLowerContext = ast_context.into();
-	let instructions = eggscript_context.compile_to_eggscript(units)?;
+	let instructions = eggscript_context.compile_to_eggscript(units, None)?;
 
 	for instruction in instructions.iter() {
 		println!("{:?}", instruction);

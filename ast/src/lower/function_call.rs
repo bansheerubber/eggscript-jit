@@ -66,7 +66,16 @@ impl AstLowerContext {
 			}
 		}
 
-		let result = self.value_store.new_temp(function.ty);
+		let result = self.value_store.new_temp(
+			function.return_ty.unwrap_or(
+				self.program
+					.type_store
+					.lock()
+					.unwrap()
+					.name_to_type_handle("null")
+					.unwrap(),
+			),
+		);
 
 		units.push(self.unit_store.new_unit(
 			vec![MIR::new(

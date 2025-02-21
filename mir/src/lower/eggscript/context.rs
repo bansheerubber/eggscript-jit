@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use eggscript_interpreter::{Instruction, RelativeStackAddress};
-use eggscript_types::{TypeHandle, TypeStore, P};
+use eggscript_types::{FunctionType, TypeHandle, TypeStore, P};
 use std::{
 	collections::HashMap,
 	ops::Deref,
@@ -39,9 +39,13 @@ impl EggscriptLowerContext {
 		}
 	}
 
-	pub fn compile_to_eggscript(&mut self, units: Vec<Unit>) -> Result<Vec<Instruction>> {
+	pub fn compile_to_eggscript(
+		&mut self,
+		units: Vec<Unit>,
+		function: Option<FunctionType>,
+	) -> Result<Vec<Instruction>> {
 		self.build_value_dependencies(&units);
-		self.type_check_units(&units);
+		self.type_check_units(&units, function.as_ref());
 		return self.lower_units(units);
 	}
 
@@ -100,9 +104,31 @@ impl EggscriptLowerContext {
 		Ok(instructions)
 	}
 
-	fn type_check_units(&mut self, units: &Vec<Unit>) {
+	fn type_check_units(&mut self, units: &Vec<Unit>, function: Option<&FunctionType>) {
 		let type_store = self.type_store.lock().unwrap();
 		for unit in units.iter() {
+			match &unit.transition {
+				Transition::Return(value) => {
+					assert!(function.is_some(), "return found in non-function unit");
+
+					let function = function.unwrap();
+
+					assert!(
+						function.return_type.is_some() == value.is_some(),
+						"malformed return statement"
+					);
+
+					if let Some(value) = value {
+						assert!(
+							type_store
+								.are_types_compatible(function.return_type.unwrap(), value.ty()),
+							"return types not compatible"
+						);
+					}
+				}
+				_ => {}
+			}
+
 			for mir in unit.mir.iter() {
 				match &mir.info {
 					MIRInfo::Allocate(_, _) => {}
@@ -334,7 +360,7 @@ impl EggscriptLowerContext {
 
 				Ok(instructions)
 			}
-			MIRInfo::CallFunction(_, function_handle, arguments, result) => {
+			MIRInfo::CallFunction(name, function_handle, arguments, result) => {
 				let mut instructions = vec![];
 				for argument in arguments.iter() {
 					match argument.deref() {
@@ -353,10 +379,15 @@ impl EggscriptLowerContext {
 					}
 				}
 
+				let type_store = self.type_store.lock().unwrap();
+				let function_type = type_store.get_function(name).unwrap();
+
 				instructions.push(Instruction::CallFunction(*function_handle));
 
 				// if the result isn't used, then pop it from the stack
-				if !self.value_used_by.contains_key(&result.id()) {
+				if !self.value_used_by.contains_key(&result.id())
+					&& function_type.return_type.is_some()
+				{
 					instructions.push(Instruction::Pop);
 				}
 

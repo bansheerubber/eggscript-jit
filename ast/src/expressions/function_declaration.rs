@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
-use eggscript_types::{TypeHandle, P};
+use eggscript_types::{FunctionType, TypeHandle, P};
 use pest::iterators::Pair;
 
 use crate::expressions::Expression;
@@ -20,10 +20,11 @@ pub struct Function {
 	pub arguments: Vec<FunctionArgument>,
 	pub id: usize,
 	pub name: String,
+	pub return_ty: Option<TypeHandle>,
 	pub scope: Option<P<Expression>>,
 	#[allow(dead_code)]
 	pub span: Span,
-	pub ty: TypeHandle,
+	pub ty: FunctionType,
 }
 
 impl Function {
@@ -38,7 +39,7 @@ impl Function {
 			initial_prefix,
 			"Function".yellow(),
 			self.name.cyan(),
-			format!("{:?}", self.ty).cyan(),
+			format!("{:?}", self.return_ty).cyan(),
 		))?;
 
 		f.write_fmt(format_args!(
@@ -120,13 +121,28 @@ impl Expression {
 			arguments.push(FunctionArgument { name, span, ty });
 		}
 
-		let return_type = pairs.next().context("Could not get return type")?.as_str();
-		let return_type = context
-			.type_store
-			.lock()
-			.unwrap()
-			.name_to_type_handle(return_type)
-			.context("Could not find return type")?;
+		let return_type = if let Rule::function_return_type =
+			pairs.peek().context("Could not peek next")?.as_rule()
+		{
+			let return_type = pairs
+				.next()
+				.context("Could not get return type")?
+				.into_inner()
+				.next()
+				.context("Could not get return type")?
+				.as_str();
+
+			Some(
+				context
+					.type_store
+					.lock()
+					.unwrap()
+					.name_to_type_handle(return_type)
+					.context("Could not find return type")?,
+			)
+		} else {
+			None
+		};
 
 		let block = pairs.next().context("Could not get next pair")?;
 		let block_span = block.as_span().into();
@@ -140,7 +156,7 @@ impl Expression {
 			})
 			.collect::<Vec<Result<P<Expression>>>>();
 
-		context.type_store.lock().unwrap().create_function_type(
+		let function_ty = context.type_store.lock().unwrap().create_function_type(
 			name,
 			arguments
 				.iter()
@@ -153,9 +169,10 @@ impl Expression {
 			arguments,
 			id,
 			name: name.into(),
+			return_ty: return_type,
 			scope: Some(Expression::new_scope(expressions, block_span)?),
 			span,
-			ty: return_type,
+			ty: function_ty,
 		}))
 	}
 }
