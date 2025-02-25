@@ -7,3 +7,4 @@ edition = "2024"
 anyhow = "1.0.86"
 eggscript_interpreter = { path = "../interpreter/" }
 eggscript_types = { path = "../types/" }
+inkwell = { version = "0.5.0", features = ["llvm18-0-prefer-static"] }

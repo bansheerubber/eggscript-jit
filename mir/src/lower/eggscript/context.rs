@@ -1,11 +1,9 @@
 use anyhow::{Context, Result};
 use eggscript_interpreter::{Instruction, RelativeStackAddress};
 use eggscript_types::{FunctionType, TypeHandle, TypeStore, P};
-use std::{
-	collections::HashMap,
-	ops::Deref,
-	sync::{Arc, Mutex},
-};
+use std::collections::HashMap;
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 
 use crate::{MIRInfo, Span, Transition, Unit, UnitHandle, Value, ValueStore, MIR};
 

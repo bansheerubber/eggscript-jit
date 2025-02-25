@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use eggscript_types::{TypeHandle, P};
+use std::collections::HashMap;
 
 use crate::PrimitiveValue;
 

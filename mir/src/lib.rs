@@ -7,6 +7,7 @@ mod unit;
 mod value;
 
 pub use lower::EggscriptLowerContext;
+pub use lower::LlvmLowerContext;
 pub use mir::MIRInfo;
 pub use mir::Transition;
 pub use mir::MIR;

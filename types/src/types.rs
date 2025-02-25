@@ -170,6 +170,10 @@ impl TypeStore {
 		}
 	}
 
+	pub fn get_type(&self, ty: TypeHandle) -> Option<&Type> {
+		self.types.get(ty)
+	}
+
 	pub fn are_types_compatible(&self, type1: TypeHandle, type2: TypeHandle) -> bool {
 		let type1 = self.resolve_type(type1);
 		let type2 = self.resolve_type(type2);

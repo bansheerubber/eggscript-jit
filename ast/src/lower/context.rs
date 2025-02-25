@@ -1,8 +1,10 @@
 use anyhow::Result;
 use eggscript_mir::{
-	EggscriptLowerContext, MIRInfo, Transition, Unit, UnitHandle, UnitStore, Value, ValueStore, MIR,
+	EggscriptLowerContext, LlvmLowerContext, MIRInfo, Transition, Unit, UnitHandle, UnitStore,
+	Value, ValueStore, MIR,
 };
 use eggscript_types::P;
+use inkwell::{builder::Builder, context, module::Module};
 
 use crate::{
 	expressions::{Block, Expression, ExpressionInfo},
@@ -32,6 +34,22 @@ impl AstLowerContext {
 			unit_store: UnitStore::new(),
 			value_store: ValueStore::new(),
 		}
+	}
+
+	pub fn into_llvm_lower_context<'a, 'ctx>(
+		self,
+		context: &'ctx context::Context,
+		builder: &'a Builder<'ctx>,
+		module: &'a Module<'ctx>,
+	) -> LlvmLowerContext<'a, 'ctx> {
+		LlvmLowerContext::new(
+			context,
+			builder,
+			module,
+			self.program.type_store.clone(),
+			self.value_store,
+			&self.program.file_name,
+		)
 	}
 
 	pub fn lower_expression(
