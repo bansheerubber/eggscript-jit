@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::Parser;
 
 #[cfg(test)]
-mod integration_tests;
+mod tests;
 
 #[derive(Parser)]
 #[command(name = "eggscript")]

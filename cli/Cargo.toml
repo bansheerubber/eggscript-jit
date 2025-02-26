@@ -12,3 +12,4 @@ eggscript_interpreter = { path = "../interpreter" }
 eggscript_mir = { path = "../mir" }
 eggscript_types = { path = "../types" }
 inkwell = { version = "0.5.0", features = ["llvm18-0-prefer-static"] }
+serial_test = "3.2.0"
