@@ -23,29 +23,31 @@ impl AstLowerContext {
 
 			match value.as_ref().unwrap().deref() {
 				Value::Location { ty, .. } => {
-					let temp = self.value_store.new_temp(*ty);
+					let temp_value = self.value_store.new_temp(*ty);
 					units.push(self.unit_store.new_unit(
 						vec![MIR::new(
-							MIRInfo::StoreValue(temp.clone(), value.clone().unwrap()),
+							MIRInfo::StoreValue(temp_value.clone(), value.clone().unwrap()),
 							expression.span,
 						)],
 						Transition::Next,
 					));
+
+					Some(temp_value)
 				}
 				Value::Primitive { ty, value, .. } => {
-					let temp = self.value_store.new_temp(*ty);
+					let temp_value = self.value_store.new_temp(*ty);
 					units.push(self.unit_store.new_unit(
 						vec![MIR::new(
-							MIRInfo::StoreLiteral(temp.clone(), value.clone()),
+							MIRInfo::StoreLiteral(temp_value.clone(), value.clone()),
 							expression.span,
 						)],
 						Transition::Next,
 					));
-				}
-				Value::Temp { .. } => {}
-			}
 
-			value
+					Some(temp_value)
+				}
+				Value::Temp { .. } => value,
+			}
 		} else {
 			None
 		};

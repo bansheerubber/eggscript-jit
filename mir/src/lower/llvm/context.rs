@@ -114,7 +114,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			.unwrap();
 
 		let passes: &[&str] = &[
-			"instcombine", // combine redundant instructions
+			"instcombine<no-verify-fixpoint>", // combine redundant instructions
 			"reassociate", // rearrange math order of operations to be a little more CPU efficient
 			"gvn",         // remove redundant loads
 			"simplifycfg", // perform dead code elimination and basic block merging
@@ -216,12 +216,17 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				}
 				Transition::Invalid => unreachable!(),
 				Transition::Next => {
-					if i + 1 >= units.len() {
-						continue;
-					}
-
 					self.builder
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
+
+					if i + 1 >= units.len() {
+						if function.is_some() {
+							self.builder
+								.build_return(Some(&self.context.f64_type().const_zero()))?;
+						}
+
+						continue;
+					}
 
 					self.builder.build_unconditional_branch(
 						*self.units_to_blocks.get(&units[i + 1].id).unwrap(),
@@ -248,7 +253,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			self.builder.build_return(None)?;
 		}
 
-		// assert!(llvm_function.verify(true));
+		assert!(llvm_function.verify(true));
 
 		Ok(llvm_function)
 	}
@@ -424,14 +429,22 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				PrimitiveValue::Integer(_) => unreachable!(),
 				PrimitiveValue::String(_) => unreachable!(),
 			},
-			crate::Value::Temp { id, .. } => Ok(self
-				.builder
-				.build_load(
-					self.context.f64_type(),
-					self.variables.get(id).unwrap().into_pointer_value(),
-					"temp_",
-				)?
-				.into_float_value()),
+			crate::Value::Temp { id, .. } => {
+				let value = self.variables.get(id).unwrap();
+
+				if value.is_pointer_value() {
+					Ok(self
+						.builder
+						.build_load(
+							self.context.f64_type(),
+							self.variables.get(id).unwrap().into_pointer_value(),
+							"temp_",
+						)?
+						.into_float_value())
+				} else {
+					Ok(value.into_float_value())
+				}
+			}
 		}
 	}
 
@@ -604,18 +617,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 				let mut args = vec![];
 				for argument in arguments.iter() {
-					args.push(
-						self.builder
-							.build_load(
-								self.type_to_llvm_basic_type(argument.ty()),
-								self.variables
-									.get(&argument.id())
-									.unwrap()
-									.into_pointer_value(),
-								&format!("arg{}_", argument.id()),
-							)?
-							.into(),
-					);
+					args.push(self.value_to_llvm_float_value(argument)?.into());
 				}
 
 				let type_store = self.type_store.lock().unwrap();
