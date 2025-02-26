@@ -1,12 +1,13 @@
 use anyhow::Result;
 use colored::Colorize;
 use eggscript_ast::{compile_expression, compile_function, parse_file, Function, Program};
-use eggscript_interpreter::{get_native_function_mapping, Instruction, Interpreter};
+use eggscript_interpreter::{get_native_function_mapping_for_interpreter, Instruction, Interpreter};
 use eggscript_mir::EggscriptLowerContext;
 use eggscript_types::P;
 use std::ops::Deref;
 
-fn lower_function(
+#[allow(dead_code)]
+pub fn lower_function(
 	program: P<Program>,
 	function: &P<Function>,
 	debug: bool,
@@ -36,6 +37,7 @@ fn lower_function(
 	Ok(instructions)
 }
 
+#[allow(dead_code)]
 pub fn run_eggscript_program() -> Result<()> {
 	let program = parse_file("test.egg")?;
 
@@ -63,7 +65,7 @@ pub fn run_eggscript_program() -> Result<()> {
 
 	let mut interpreter = Interpreter::new(instructions);
 
-	let native_function_mapping = get_native_function_mapping();
+	let native_function_mapping = get_native_function_mapping_for_interpreter();
 
 	for function in program.functions.iter() {
 		if function.scope.is_some() {

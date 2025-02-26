@@ -4,7 +4,6 @@ members = [
 	"ast",
 	"cli",
 	"interpreter",
-	"jit",
 	"mir",
 	"types",
 ]

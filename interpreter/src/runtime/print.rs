@@ -2,6 +2,10 @@ use std::sync::Mutex;
 
 use crate::Value;
 
+pub fn print_double2(value: f64) {
+	println!("{}", value);
+}
+
 pub fn print_double(values: Vec<Value>) -> Value {
 	if values.len() == 0 {
 		return Value::Null;
@@ -18,6 +22,10 @@ pub fn print_double(values: Vec<Value>) -> Value {
 }
 
 static TEST_PRINT_BUFFER: Mutex<Vec<String>> = Mutex::new(vec![]);
+
+pub fn test_print2(value: f64) {
+	TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value))
+}
 
 pub fn test_print(values: Vec<Value>) -> Value {
 	if values.len() == 0 {

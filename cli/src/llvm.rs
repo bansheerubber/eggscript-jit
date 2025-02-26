@@ -1,16 +1,19 @@
 use anyhow::Result;
 use colored::Colorize;
 use eggscript_ast::{compile_expression, compile_function, parse_file, Function, Program};
+use eggscript_interpreter::get_native_function_mapping_for_jit;
 use eggscript_types::P;
 use inkwell::{
 	builder::Builder,
 	context::Context,
+	execution_engine::JitFunction,
 	module::Module,
 	values::{AnyValue, FunctionValue},
+	OptimizationLevel,
 };
 use std::ops::Deref;
 
-fn lower_function<'a, 'ctx>(
+pub fn lower_function<'a, 'ctx>(
 	context: &'ctx Context,
 	builder: &'a Builder<'ctx>,
 	module: &'a Module<'ctx>,
@@ -43,6 +46,8 @@ fn lower_function<'a, 'ctx>(
 	return function_value;
 }
 
+type EntryFunction = unsafe extern "C" fn();
+
 pub fn run_llvm_program() -> Result<()> {
 	let program = parse_file("test.egg")?;
 
@@ -73,6 +78,12 @@ pub fn run_llvm_program() -> Result<()> {
 	println!("{}", "LLVM IR".yellow());
 	println!("{}", entry.print_to_string().to_string_lossy());
 
+	let engine = module
+		.create_jit_execution_engine(OptimizationLevel::Default)
+		.unwrap();
+
+	let function_mapping = get_native_function_mapping_for_jit();
+
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
 			let function =
@@ -80,10 +91,19 @@ pub fn run_llvm_program() -> Result<()> {
 
 			println!("{}", "LLVM IR".yellow());
 			println!("{}", function.print_to_string().to_string_lossy());
+		} else {
+			let function_declaration = module.get_function(&function.name).unwrap();
+			engine.add_global_mapping(
+				&function_declaration,
+				*function_mapping.get(&function.name).unwrap(),
+			);
 		}
 	}
 
-	llvm_context.write();
+	unsafe {
+		let function: JitFunction<EntryFunction> = engine.get_function("entry")?;
+		function.call();
+	}
 
 	drop(llvm_context);
 
