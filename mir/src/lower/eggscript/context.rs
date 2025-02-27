@@ -1,39 +1,29 @@
 use anyhow::{Context, Result};
 use eggscript_interpreter::{Instruction, RelativeStackAddress};
-use eggscript_types::{FunctionType, TypeHandle, TypeStore, P};
+use eggscript_types::{FunctionType, TypeStore, P};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
-use crate::{MIRInfo, Span, Transition, Unit, UnitHandle, Value, ValueStore, MIR};
+use crate::lower::CommonContext;
+use crate::{MIRInfo, Transition, Unit, UnitHandle, Value, MIR};
 
 pub struct EggscriptLowerContext {
 	allocations: Vec<P<Value>>,
-	file_name: String,
+	common_context: CommonContext,
 	jump_instructions: Vec<usize>,
-	type_store: Arc<Mutex<TypeStore>>,
 	unit_to_instruction: HashMap<UnitHandle, usize>,
-	value_used_by: HashMap<usize, Vec<usize>>,
 	value_to_stack: HashMap<usize, usize>,
-	#[allow(dead_code)]
-	value_store: ValueStore,
 }
 
 impl EggscriptLowerContext {
-	pub fn new(
-		type_store: Arc<Mutex<TypeStore>>,
-		value_store: ValueStore,
-		file_name: &str,
-	) -> Self {
+	pub fn new(type_store: Arc<Mutex<TypeStore>>, file_name: &str) -> Self {
 		EggscriptLowerContext {
 			allocations: Vec::new(),
-			file_name: file_name.to_string(),
+			common_context: CommonContext::new(type_store, file_name),
 			jump_instructions: Vec::new(),
-			type_store,
 			unit_to_instruction: HashMap::new(),
-			value_used_by: HashMap::new(),
 			value_to_stack: HashMap::new(),
-			value_store,
 		}
 	}
 
@@ -42,8 +32,9 @@ impl EggscriptLowerContext {
 		units: Vec<Unit>,
 		function: Option<FunctionType>,
 	) -> Result<Vec<Instruction>> {
-		self.build_value_dependencies(&units);
-		self.type_check_units(&units, function.as_ref());
+		self.common_context.build_value_dependencies(&units);
+		self.common_context
+			.type_check_units(&units, function.as_ref());
 		return self.lower_units(units);
 	}
 
@@ -100,146 +91,6 @@ impl EggscriptLowerContext {
 		instructions.insert(0, Instruction::Reserve(self.allocations.len()));
 
 		Ok(instructions)
-	}
-
-	fn type_check_units(&mut self, units: &Vec<Unit>, function: Option<&FunctionType>) {
-		let type_store = self.type_store.lock().unwrap();
-		for unit in units.iter() {
-			match &unit.transition {
-				Transition::Return(value) => {
-					assert!(function.is_some(), "return found in non-function unit");
-
-					let function = function.unwrap();
-
-					assert!(
-						function.return_type.is_some() == value.is_some(),
-						"malformed return statement"
-					);
-
-					if let Some(value) = value {
-						assert!(
-							type_store
-								.are_types_compatible(function.return_type.unwrap(), value.ty()),
-							"return types not compatible"
-						);
-					}
-				}
-				_ => {}
-			}
-
-			for mir in unit.mir.iter() {
-				match &mir.info {
-					MIRInfo::Allocate(_, _) => {}
-					MIRInfo::BinaryOperation(result, left, right, _) => {
-						self.type_check(
-							&type_store,
-							result.ty(),
-							left.ty(),
-							&mir.span,
-							"result not compatible with left",
-						);
-
-						self.type_check(
-							&type_store,
-							result.ty(),
-							right.ty(),
-							&mir.span,
-							"result not compatible with right",
-						);
-
-						self.type_check(
-							&type_store,
-							left.ty(),
-							right.ty(),
-							&mir.span,
-							"left not compatible with right",
-						);
-					}
-					MIRInfo::CallFunction(function_name, _, arguments, _) => {
-						let mut index = 0;
-						let function = type_store.get_function(function_name).unwrap();
-						for argument in arguments.iter() {
-							self.type_check(
-								&type_store,
-								argument.ty(),
-								*function.argument_types.get(index).unwrap(),
-								&mir.span,
-								&format!("argument #{} not compatible with value", index),
-							);
-							index += 1;
-						}
-					}
-					MIRInfo::StoreLiteral(lvalue, rvalue) => {
-						self.type_check(
-							&type_store,
-							lvalue.ty(),
-							rvalue.get_type_from_type_store(&type_store),
-							&mir.span,
-							"lvaluve not compatible with rvalue",
-						);
-					}
-					MIRInfo::StoreValue(lvalue, rvalue) => {
-						self.type_check(
-							&type_store,
-							lvalue.ty(),
-							rvalue.ty(),
-							&mir.span,
-							"lvaluve not compatible with rvalue",
-						);
-					}
-				}
-			}
-		}
-	}
-
-	fn type_check(
-		&self,
-		type_store: &TypeStore,
-		type1: TypeHandle,
-		type2: TypeHandle,
-		span: &Span,
-		message: &str,
-	) {
-		if !type_store.are_types_compatible(type1, type2) {
-			println!("{}", message);
-			println!("{}", self.print_span(span));
-			panic!();
-		}
-	}
-
-	fn build_value_dependencies(&mut self, units: &Vec<Unit>) {
-		for unit in units.iter() {
-			for mir in unit.mir.iter() {
-				match &mir.info {
-					MIRInfo::BinaryOperation(lvalue, operand1, operand2, _) => {
-						self.value_used_by
-							.entry(operand1.id())
-							.or_default()
-							.push(lvalue.id());
-
-						self.value_used_by
-							.entry(operand2.id())
-							.or_default()
-							.push(lvalue.id());
-					}
-					MIRInfo::CallFunction(_, _, arguments, result) => {
-						for argument in arguments.iter() {
-							self.value_used_by
-								.entry(argument.id())
-								.or_default()
-								.push(result.id());
-						}
-					}
-					MIRInfo::StoreValue(lvalue, rvalue) => {
-						self.value_used_by
-							.entry(rvalue.id())
-							.or_default()
-							.push(lvalue.id());
-					}
-					_ => {}
-				}
-			}
-		}
 	}
 
 	fn lower_unit(&mut self, unit: &Unit, instruction_index: usize) -> Result<Vec<Instruction>> {
@@ -377,13 +228,13 @@ impl EggscriptLowerContext {
 					}
 				}
 
-				let type_store = self.type_store.lock().unwrap();
+				let type_store = self.common_context.type_store.lock().unwrap();
 				let function_type = type_store.get_function(name).unwrap();
 
 				instructions.push(Instruction::CallFunction(*function_handle));
 
 				// if the result isn't used, then pop it from the stack
-				if !self.value_used_by.contains_key(&result.id())
+				if !self.common_context.value_used_by.contains_key(&result.id())
 					&& function_type.return_type.is_some()
 				{
 					instructions.push(Instruction::Pop);
@@ -439,10 +290,5 @@ impl EggscriptLowerContext {
 				}
 			}
 		}
-	}
-
-	fn print_span(&self, span: &Span) -> String {
-		let contents = std::fs::read_to_string(&self.file_name).unwrap();
-		contents[span.start() as usize..span.end() as usize].into()
 	}
 }

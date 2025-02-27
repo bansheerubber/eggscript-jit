@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use eggscript_interpreter::Value;
 use eggscript_types::{FunctionType, KnownTypeInfo, Primitive, Type, TypeHandle, TypeStore, P};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -14,30 +13,16 @@ use std::ops::Deref;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use crate::{
-	BinaryOperator, MIRInfo, PrimitiveValue, Span, Transition, Unit, UnitHandle, ValueStore, MIR,
-};
+use crate::lower::CommonContext;
+use crate::{BinaryOperator, MIRInfo, PrimitiveValue, Transition, Unit, MIR};
 
 pub struct LlvmLowerContext<'a, 'ctx> {
-	#[allow(dead_code)]
-	allocations: Vec<P<Value>>,
-	file_name: String,
-	#[allow(dead_code)]
-	jump_instructions: Vec<usize>,
-	type_store: Arc<Mutex<TypeStore>>,
-	#[allow(dead_code)]
-	unit_to_instruction: HashMap<UnitHandle, usize>,
-	value_used_by: HashMap<usize, Vec<usize>>,
-	#[allow(dead_code)]
-	value_to_stack: HashMap<usize, usize>,
-	#[allow(dead_code)]
-	value_store: ValueStore,
-
 	builder: &'a Builder<'ctx>,
+	common_context: CommonContext,
 	context: &'ctx context::Context,
 	module: &'a Module<'ctx>,
 	units_to_blocks: HashMap<usize, BasicBlock<'ctx>>,
-	variables: HashMap<usize, BasicValueEnum<'ctx>>,
+	value_to_basic_value: HashMap<usize, BasicValueEnum<'ctx>>,
 }
 
 impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
@@ -46,24 +31,15 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		builder: &'a Builder<'ctx>,
 		module: &'a Module<'ctx>,
 		type_store: Arc<Mutex<TypeStore>>,
-		value_store: ValueStore,
 		file_name: &str,
 	) -> Self {
 		LlvmLowerContext {
-			allocations: Vec::new(),
-			file_name: file_name.to_string(),
-			jump_instructions: Vec::new(),
-			type_store,
-			unit_to_instruction: HashMap::new(),
-			value_used_by: HashMap::new(),
-			value_to_stack: HashMap::new(),
-			value_store,
-
-			context,
 			builder,
+			common_context: CommonContext::new(type_store, file_name),
+			context,
 			module,
 			units_to_blocks: HashMap::new(),
-			variables: HashMap::new(),
+			value_to_basic_value: HashMap::new(),
 		}
 	}
 
@@ -72,8 +48,9 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		units: Vec<Unit>,
 		function: Option<FunctionType>,
 	) -> Result<FunctionValue<'ctx>> {
-		self.build_value_dependencies(&units);
-		self.type_check_units(&units, function.as_ref());
+		self.common_context.build_value_dependencies(&units);
+		self.common_context
+			.type_check_units(&units, function.as_ref());
 		return self.lower_units(units, function.as_ref());
 	}
 
@@ -131,7 +108,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 	}
 
 	fn type_to_llvm_basic_type(&self, ty: TypeHandle) -> BasicTypeEnum<'ctx> {
-		let type_store = self.type_store.lock().unwrap();
+		let type_store = self.common_context.type_store.lock().unwrap();
 		let ty = type_store.get_type(ty);
 		match ty {
 			Some(Type::FunctionReturn { .. }) => todo!(),
@@ -192,7 +169,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
 
-					let value = self.variables.get(&value.id()).unwrap();
+					let value = self.value_to_basic_value.get(&value.id()).unwrap();
 					let then_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
 					self.builder.build_conditional_branch(
@@ -205,7 +182,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
 
-					let value = self.variables.get(&value.id()).unwrap();
+					let value = self.value_to_basic_value.get(&value.id()).unwrap();
 					let else_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
 					self.builder.build_conditional_branch(
@@ -221,6 +198,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					if i + 1 >= units.len() {
 						if function.is_some() {
+							// TODO fix type issue
 							self.builder
 								.build_return(Some(&self.context.f64_type().const_zero()))?;
 						}
@@ -258,146 +236,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		Ok(llvm_function)
 	}
 
-	fn type_check_units(&mut self, units: &Vec<Unit>, function: Option<&FunctionType>) {
-		let type_store = self.type_store.lock().unwrap();
-		for unit in units.iter() {
-			match &unit.transition {
-				Transition::Return(value) => {
-					assert!(function.is_some(), "return found in non-function unit");
-
-					let function = function.unwrap();
-
-					assert!(
-						function.return_type.is_some() == value.is_some(),
-						"malformed return statement"
-					);
-
-					if let Some(value) = value {
-						assert!(
-							type_store
-								.are_types_compatible(function.return_type.unwrap(), value.ty()),
-							"return types not compatible"
-						);
-					}
-				}
-				_ => {}
-			}
-
-			for mir in unit.mir.iter() {
-				match &mir.info {
-					MIRInfo::Allocate(_, _) => {}
-					MIRInfo::BinaryOperation(result, left, right, _) => {
-						self.type_check(
-							&type_store,
-							result.ty(),
-							left.ty(),
-							&mir.span,
-							"result not compatible with left",
-						);
-
-						self.type_check(
-							&type_store,
-							result.ty(),
-							right.ty(),
-							&mir.span,
-							"result not compatible with right",
-						);
-
-						self.type_check(
-							&type_store,
-							left.ty(),
-							right.ty(),
-							&mir.span,
-							"left not compatible with right",
-						);
-					}
-					MIRInfo::CallFunction(function_name, _, arguments, _) => {
-						let mut index = 0;
-						let function = type_store.get_function(function_name).unwrap();
-						for argument in arguments.iter() {
-							self.type_check(
-								&type_store,
-								argument.ty(),
-								*function.argument_types.get(index).unwrap(),
-								&mir.span,
-								&format!("argument #{} not compatible with value", index),
-							);
-							index += 1;
-						}
-					}
-					MIRInfo::StoreLiteral(lvalue, rvalue) => {
-						self.type_check(
-							&type_store,
-							lvalue.ty(),
-							rvalue.get_type_from_type_store(&type_store),
-							&mir.span,
-							"lvaluve not compatible with rvalue",
-						);
-					}
-					MIRInfo::StoreValue(lvalue, rvalue) => {
-						self.type_check(
-							&type_store,
-							lvalue.ty(),
-							rvalue.ty(),
-							&mir.span,
-							"lvaluve not compatible with rvalue",
-						);
-					}
-				}
-			}
-		}
-	}
-
-	fn type_check(
-		&self,
-		type_store: &TypeStore,
-		type1: TypeHandle,
-		type2: TypeHandle,
-		span: &Span,
-		message: &str,
-	) {
-		if !type_store.are_types_compatible(type1, type2) {
-			println!("{}", message);
-			println!("{}", self.print_span(span));
-			panic!();
-		}
-	}
-
-	fn build_value_dependencies(&mut self, units: &Vec<Unit>) {
-		for unit in units.iter() {
-			for mir in unit.mir.iter() {
-				match &mir.info {
-					MIRInfo::BinaryOperation(lvalue, operand1, operand2, _) => {
-						self.value_used_by
-							.entry(operand1.id())
-							.or_default()
-							.push(lvalue.id());
-
-						self.value_used_by
-							.entry(operand2.id())
-							.or_default()
-							.push(lvalue.id());
-					}
-					MIRInfo::CallFunction(_, _, arguments, result) => {
-						for argument in arguments.iter() {
-							self.value_used_by
-								.entry(argument.id())
-								.or_default()
-								.push(result.id());
-						}
-					}
-					MIRInfo::StoreValue(lvalue, rvalue) => {
-						self.value_used_by
-							.entry(rvalue.id())
-							.or_default()
-							.push(lvalue.id());
-					}
-					_ => {}
-				}
-			}
-		}
-	}
-
 	fn lower_unit(&mut self, unit: &Unit, function: FunctionValue<'ctx>) -> Result<()> {
 		let block = self
 			.context
@@ -420,7 +258,10 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				.builder
 				.build_load(
 					self.context.f64_type(),
-					self.variables.get(id).unwrap().into_pointer_value(),
+					self.value_to_basic_value
+						.get(id)
+						.unwrap()
+						.into_pointer_value(),
 					"temp_",
 				)?
 				.into_float_value()),
@@ -430,14 +271,17 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				PrimitiveValue::String(_) => unreachable!(),
 			},
 			crate::Value::Temp { id, .. } => {
-				let value = self.variables.get(id).unwrap();
+				let value = self.value_to_basic_value.get(id).unwrap();
 
 				if value.is_pointer_value() {
 					Ok(self
 						.builder
 						.build_load(
 							self.context.f64_type(),
-							self.variables.get(id).unwrap().into_pointer_value(),
+							self.value_to_basic_value
+								.get(id)
+								.unwrap()
+								.into_pointer_value(),
 							"temp_",
 						)?
 						.into_float_value())
@@ -464,12 +308,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder.build_store(alloca, *argument_value)?;
 				}
 
-				self.variables.insert(value.id(), alloca.into());
+				self.value_to_basic_value.insert(value.id(), alloca.into());
 			}
 			MIRInfo::BinaryOperation(value, left_operand, right_operand, operator) => {
 				match operator {
 					BinaryOperator::Plus => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_add(
@@ -481,7 +325,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::Minus => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_sub(
@@ -493,7 +337,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::Multiply => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_mul(
@@ -505,7 +349,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::Divide => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_div(
@@ -517,7 +361,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::Modulus => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_rem(
@@ -529,7 +373,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::Equal => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_compare(
@@ -542,7 +386,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::NotEqual => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_compare(
@@ -555,7 +399,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::LessThan => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_compare(
@@ -568,7 +412,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::GreaterThan => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_compare(
@@ -581,7 +425,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::LessThanEqualTo => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_compare(
@@ -594,7 +438,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						);
 					}
 					BinaryOperator::GreaterThanEqualTo => {
-						self.variables.insert(
+						self.value_to_basic_value.insert(
 							value.id(),
 							self.builder
 								.build_float_compare(
@@ -620,7 +464,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					args.push(self.value_to_llvm_float_value(argument)?.into());
 				}
 
-				let type_store = self.type_store.lock().unwrap();
+				let type_store = self.common_context.type_store.lock().unwrap();
 				let function_type = type_store
 					.get_function(name)
 					.context("Could not find function")?;
@@ -634,8 +478,8 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				if function_type.return_type.is_some() {
 					drop(type_store);
 
-					if !self.variables.contains_key(&return_value.id()) {
-						self.variables.insert(
+					if !self.value_to_basic_value.contains_key(&return_value.id()) {
+						self.value_to_basic_value.insert(
 							return_value.id(),
 							self.builder
 								.build_alloca(
@@ -647,7 +491,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					}
 
 					self.builder.build_store(
-						self.variables
+						self.value_to_basic_value
 							.get(&return_value.id())
 							.unwrap()
 							.into_pointer_value(),
@@ -656,8 +500,8 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				}
 			}
 			MIRInfo::StoreLiteral(value, primitive_value) => {
-				if !self.variables.contains_key(&value.id()) {
-					self.variables.insert(
+				if !self.value_to_basic_value.contains_key(&value.id()) {
+					self.value_to_basic_value.insert(
 						value.id(),
 						self.builder
 							.build_alloca(
@@ -671,7 +515,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				match primitive_value {
 					PrimitiveValue::Double(number) => {
 						self.builder.build_store(
-							self.variables
+							self.value_to_basic_value
 								.get(&value.id())
 								.unwrap()
 								.into_pointer_value(),
@@ -680,7 +524,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					}
 					PrimitiveValue::Integer(number) => {
 						self.builder.build_store(
-							self.variables
+							self.value_to_basic_value
 								.get(&value.id())
 								.unwrap()
 								.into_pointer_value(),
@@ -691,8 +535,8 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				}
 			}
 			MIRInfo::StoreValue(lvalue, rvalue) => {
-				if !self.variables.contains_key(&lvalue.id()) {
-					self.variables.insert(
+				if !self.value_to_basic_value.contains_key(&lvalue.id()) {
+					self.value_to_basic_value.insert(
 						lvalue.id(),
 						self.builder
 							.build_alloca(
@@ -703,7 +547,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					);
 				}
 
-				let value = self.variables.get(&rvalue.id()).unwrap();
+				let value = self.value_to_basic_value.get(&rvalue.id()).unwrap();
 				let value = if value.is_pointer_value() {
 					self.builder.build_load(
 						self.type_to_llvm_basic_type(rvalue.ty()),
@@ -715,7 +559,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				};
 
 				self.builder.build_store(
-					self.variables
+					self.value_to_basic_value
 						.get(&lvalue.id())
 						.unwrap()
 						.into_pointer_value(),
@@ -725,10 +569,5 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		}
 
 		Ok(())
-	}
-
-	fn print_span(&self, span: &Span) -> String {
-		let contents = std::fs::read_to_string(&self.file_name).unwrap();
-		contents[span.start() as usize..span.end() as usize].into()
 	}
 }
