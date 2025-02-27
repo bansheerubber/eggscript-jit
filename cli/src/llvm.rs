@@ -48,6 +48,7 @@ pub fn lower_function<'a, 'ctx>(
 
 type EntryFunction = unsafe extern "C" fn();
 
+#[allow(dead_code)]
 pub fn run_llvm_program() -> Result<()> {
 	let program = parse_file("test.egg")?;
 

@@ -6,7 +6,7 @@ use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
-use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue};
+use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, PointerValue};
 use inkwell::{context, FloatPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -14,7 +14,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::lower::CommonContext;
-use crate::{BinaryOperator, MIRInfo, PrimitiveValue, Transition, Unit, MIR};
+use crate::{BinaryOperator, MIRInfo, PrimitiveValue, Transition, Unit, Value, MIR};
 
 pub struct LlvmLowerContext<'a, 'ctx> {
 	builder: &'a Builder<'ctx>,
@@ -115,12 +115,8 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			Some(Type::Known { info, .. }) => match info {
 				KnownTypeInfo::Primitive(primitive) => match primitive {
 					Primitive::Double => self.context.f64_type().into(),
-					Primitive::I8 | Primitive::U8 | Primitive::Char => {
-						self.context.i8_type().into()
-					}
-					Primitive::I16 | Primitive::U16 => self.context.i16_type().into(),
-					Primitive::I32 | Primitive::U32 => self.context.i32_type().into(),
-					Primitive::I64 | Primitive::U64 => self.context.i64_type().into(),
+					Primitive::Char => self.context.i8_type().into(),
+					Primitive::I64 => self.context.i64_type().into(),
 					Primitive::String => todo!(),
 					Primitive::Null => todo!(),
 				},
@@ -215,6 +211,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
 
 					if let Some(value) = value {
+						// TODO fix type issue
 						self.builder
 							.build_return(Some(&self.value_to_llvm_float_value(value)?))?;
 					} else {
@@ -252,44 +249,62 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		Ok(())
 	}
 
-	fn value_to_llvm_float_value(&self, value: &P<crate::Value>) -> Result<FloatValue<'ctx>> {
+	fn value_to_llvm_float_value(&self, value: &P<Value>) -> Result<FloatValue<'ctx>> {
 		match value.deref() {
-			crate::Value::Location { id, .. } => Ok(self
+			Value::Location { .. } => Ok(self
 				.builder
 				.build_load(
 					self.context.f64_type(),
-					self.value_to_basic_value
-						.get(id)
-						.unwrap()
-						.into_pointer_value(),
+					self.value_to_llvm_pointer_value(value)?,
 					"temp_",
 				)?
 				.into_float_value()),
-			crate::Value::Primitive { value, .. } => match value {
+			Value::Primitive { value, .. } => match value {
 				PrimitiveValue::Double(value) => Ok(self.context.f64_type().const_float(*value)),
 				PrimitiveValue::Integer(_) => unreachable!(),
 				PrimitiveValue::String(_) => unreachable!(),
 			},
-			crate::Value::Temp { id, .. } => {
-				let value = self.value_to_basic_value.get(id).unwrap();
+			Value::Temp { id, .. } => {
+				let basic_value = self.value_to_basic_value.get(id).unwrap();
 
-				if value.is_pointer_value() {
+				if basic_value.is_pointer_value() {
 					Ok(self
 						.builder
 						.build_load(
 							self.context.f64_type(),
-							self.value_to_basic_value
-								.get(id)
-								.unwrap()
-								.into_pointer_value(),
+							self.value_to_llvm_pointer_value(value)?,
 							"temp_",
 						)?
 						.into_float_value())
 				} else {
-					Ok(value.into_float_value())
+					Ok(basic_value.into_float_value())
 				}
 			}
 		}
+	}
+
+	fn value_to_llvm_pointer_value(&self, value: &P<Value>) -> Result<PointerValue<'ctx>> {
+		Ok(self
+			.value_to_basic_value
+			.get(&value.id())
+			.context("Could not convert to pointer value")?
+			.into_pointer_value())
+	}
+
+	fn alloc_llvm_value(&mut self, value: &P<Value>) -> Result<()> {
+		if !self.value_to_basic_value.contains_key(&value.id()) {
+			self.value_to_basic_value.insert(
+				value.id(),
+				self.builder
+					.build_alloca(
+						self.type_to_llvm_basic_type(value.ty()),
+						&format!("temp{}_", value.id()),
+					)?
+					.into(),
+			);
+		}
+
+		Ok(())
 	}
 
 	fn lower_mir(&mut self, mir: &MIR, function: FunctionValue<'ctx>) -> Result<()> {
@@ -461,6 +476,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 				let mut args = vec![];
 				for argument in arguments.iter() {
+					// TODO fix type issue
 					args.push(self.value_to_llvm_float_value(argument)?.into());
 				}
 
@@ -478,56 +494,27 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				if function_type.return_type.is_some() {
 					drop(type_store);
 
-					if !self.value_to_basic_value.contains_key(&return_value.id()) {
-						self.value_to_basic_value.insert(
-							return_value.id(),
-							self.builder
-								.build_alloca(
-									self.type_to_llvm_basic_type(return_value.ty()),
-									&format!("temp{}_", return_value.id()),
-								)?
-								.into(),
-						);
-					}
+					self.alloc_llvm_value(return_value)?;
 
 					self.builder.build_store(
-						self.value_to_basic_value
-							.get(&return_value.id())
-							.unwrap()
-							.into_pointer_value(),
+						self.value_to_llvm_pointer_value(&return_value)?,
 						llvm_return_value.try_as_basic_value().left().unwrap(),
 					)?;
 				}
 			}
 			MIRInfo::StoreLiteral(value, primitive_value) => {
-				if !self.value_to_basic_value.contains_key(&value.id()) {
-					self.value_to_basic_value.insert(
-						value.id(),
-						self.builder
-							.build_alloca(
-								self.type_to_llvm_basic_type(value.ty()),
-								&format!("temp{}_", value.id()),
-							)?
-							.into(),
-					);
-				}
+				self.alloc_llvm_value(value)?;
 
 				match primitive_value {
 					PrimitiveValue::Double(number) => {
 						self.builder.build_store(
-							self.value_to_basic_value
-								.get(&value.id())
-								.unwrap()
-								.into_pointer_value(),
+							self.value_to_llvm_pointer_value(&value)?,
 							self.context.f64_type().const_float(*number),
 						)?;
 					}
 					PrimitiveValue::Integer(number) => {
 						self.builder.build_store(
-							self.value_to_basic_value
-								.get(&value.id())
-								.unwrap()
-								.into_pointer_value(),
+							self.value_to_llvm_pointer_value(&value)?,
 							self.context.i64_type().const_int(*number as u64, false),
 						)?;
 					}
@@ -535,17 +522,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				}
 			}
 			MIRInfo::StoreValue(lvalue, rvalue) => {
-				if !self.value_to_basic_value.contains_key(&lvalue.id()) {
-					self.value_to_basic_value.insert(
-						lvalue.id(),
-						self.builder
-							.build_alloca(
-								self.type_to_llvm_basic_type(lvalue.ty()),
-								&format!("temp{}_", lvalue.id()),
-							)?
-							.into(),
-					);
-				}
+				self.alloc_llvm_value(lvalue)?;
 
 				let value = self.value_to_basic_value.get(&rvalue.id()).unwrap();
 				let value = if value.is_pointer_value() {
@@ -558,13 +535,8 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					*value
 				};
 
-				self.builder.build_store(
-					self.value_to_basic_value
-						.get(&lvalue.id())
-						.unwrap()
-						.into_pointer_value(),
-					value,
-				)?;
+				self.builder
+					.build_store(self.value_to_llvm_pointer_value(&lvalue)?, value)?;
 			}
 		}
 
