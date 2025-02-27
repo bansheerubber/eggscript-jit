@@ -27,7 +27,7 @@ fn assert_buffer(expected: Vec<&str>, message: &str) {
 	);
 }
 
-fn run_file_in_interpreter(contents: &str, file_name: &str) -> Result<()> {
+fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Result<()> {
 	let program = parse_string(contents, file_name)?;
 	let (ast_content, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
@@ -57,7 +57,7 @@ fn run_file_in_interpreter(contents: &str, file_name: &str) -> Result<()> {
 		}
 	}
 
-	interpreter.run();
+	interpreter.run_with_timeout(timeout);
 
 	Ok(())
 }
@@ -122,7 +122,7 @@ fn recursion1() -> Result<()> {
 	let file_contents = include_str!("./test_cases/recursion1.egg");
 	let file_name = "./test_cases/recursion1.egg";
 
-	run_file_in_interpreter(file_contents, file_name)?;
+	run_file_in_interpreter(file_contents, file_name, 1000)?;
 	assert_buffer(vec!["6765"], "interpreter");
 
 	run_file_in_jit(file_contents, file_name)?;
@@ -137,7 +137,7 @@ fn for_loop1() -> Result<()> {
 	let file_contents = include_str!("./test_cases/for_loop1.egg");
 	let file_name = "./test_cases/for_loop1.egg";
 
-	run_file_in_interpreter(file_contents, file_name)?;
+	run_file_in_interpreter(file_contents, file_name, 1000)?;
 	assert_buffer(vec!["1024"], "interpreter");
 
 	run_file_in_jit(file_contents, file_name)?;
@@ -152,7 +152,7 @@ fn math1() -> Result<()> {
 	let file_contents = include_str!("./test_cases/math1.egg");
 	let file_name = "./test_cases/math1.egg";
 
-	run_file_in_interpreter(file_contents, file_name)?;
+	run_file_in_interpreter(file_contents, file_name, 1000)?;
 	assert_buffer(vec!["50159"], "interpreter");
 
 	run_file_in_jit(file_contents, file_name)?;

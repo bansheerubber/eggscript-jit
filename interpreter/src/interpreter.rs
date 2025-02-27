@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::time::Instant;
 
 use crate::instruction::{DoubleMathOperation, Instruction, Value};
 use crate::{Function, IntegerMathOperation};
@@ -64,6 +65,17 @@ impl Interpreter {
 	pub fn run(&mut self) {
 		while self.instruction_index < self.instructions.len() {
 			self.interpret();
+		}
+	}
+
+	pub fn run_with_timeout(&mut self, ms: u128) {
+		let start = Instant::now();
+		while self.instruction_index < self.instructions.len() {
+			self.interpret();
+
+			if start.elapsed().as_millis() > ms {
+				return;
+			}
 		}
 	}
 
