@@ -32,7 +32,7 @@ fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Re
 	let (ast_content, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
 	let mut eggscript_context: EggscriptLowerContext = ast_content.into();
-	let instructions = eggscript_context.compile_to_eggscript(units, None)?;
+	let instructions = eggscript_context.compile_to_eggscript(&units, None)?;
 
 	let mut interpreter = Interpreter::new(instructions);
 
@@ -40,7 +40,7 @@ fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Re
 
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
-			let instructions = eggscript::lower_function(program.clone(), function, false)?;
+			let (_, instructions) = eggscript::lower_function(program.clone(), function, false)?;
 			interpreter.add_function(eggscript_interpreter::Function::new_eggscript_function(
 				function.id,
 				function.arguments.len(),
@@ -78,7 +78,7 @@ fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
 		llvm_context.pre_define_function(&function.ty);
 	}
 
-	llvm_context.compile_to_ir(units, None)?;
+	llvm_context.compile_to_ir(&units, None)?;
 	llvm_context.optimize_ir();
 
 	let engine = module

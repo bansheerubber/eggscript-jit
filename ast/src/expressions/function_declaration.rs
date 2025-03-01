@@ -9,10 +9,10 @@ use crate::{AstContext, Span};
 
 #[derive(Clone, Debug)]
 pub struct FunctionArgument {
-	pub(crate) name: String,
+	pub name: String,
 	#[allow(dead_code)]
-	pub(crate) span: Span,
-	pub(crate) ty: Option<TypeHandle>,
+	pub span: Span,
+	pub ty: Option<TypeHandle>,
 }
 
 #[derive(Debug)]

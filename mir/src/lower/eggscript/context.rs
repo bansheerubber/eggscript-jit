@@ -29,7 +29,7 @@ impl EggscriptLowerContext {
 
 	pub fn compile_to_eggscript(
 		&mut self,
-		units: Vec<Unit>,
+		units: &Vec<Unit>,
 		function: Option<FunctionType>,
 	) -> Result<Vec<Instruction>> {
 		self.common_context.build_value_dependencies(&units);
@@ -38,7 +38,7 @@ impl EggscriptLowerContext {
 		return self.lower_units(units);
 	}
 
-	fn lower_units(&mut self, units: Vec<Unit>) -> Result<Vec<Instruction>> {
+	fn lower_units(&mut self, units: &Vec<Unit>) -> Result<Vec<Instruction>> {
 		let mut instructions = vec![];
 		for unit in units.iter() {
 			let start = instructions.len();

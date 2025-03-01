@@ -45,7 +45,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 	pub fn compile_to_ir(
 		&mut self,
-		units: Vec<Unit>,
+		units: &Vec<Unit>,
 		function: Option<FunctionType>,
 	) -> Result<FunctionValue<'ctx>> {
 		self.common_context.build_value_dependencies(&units);
@@ -128,7 +128,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 	fn lower_units(
 		&mut self,
-		units: Vec<Unit>,
+		units: &Vec<Unit>,
 		function: Option<&FunctionType>,
 	) -> Result<FunctionValue<'ctx>> {
 		let function_name = if let Some(function) = function {

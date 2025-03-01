@@ -12,4 +12,6 @@ eggscript_interpreter = { path = "../interpreter" }
 eggscript_mir = { path = "../mir" }
 eggscript_types = { path = "../types" }
 inkwell = { version = "0.5.0", features = ["llvm18-0-prefer-static"] }
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = "1.0.120"
 serial_test = "3.2.0"

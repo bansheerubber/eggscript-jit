@@ -43,7 +43,7 @@ impl Type {
 		self
 	}
 
-	pub(crate) fn get_name(&self) -> Option<&str> {
+	pub fn get_name(&self) -> Option<&str> {
 		match self {
 			Type::FunctionReturn { function_name, .. } => Some(function_name),
 			Type::Known { name, .. } => Some(name),
