@@ -31,6 +31,9 @@ struct RunArgs {
 	#[clap(flatten)]
 	contents_or_file_name: ContentsOrFileNameGroup,
 
+	#[arg(long)]
+	debug: bool,
+
 	#[clap(flatten)]
 	interpreter_or_llvm: InterpreterOrLLVMGroup,
 }
@@ -89,6 +92,7 @@ fn main() -> Result<()> {
 				contents,
 				file_name,
 			},
+			debug,
 			interpreter_or_llvm: InterpreterOrLLVMGroup { interpreter, .. },
 		}) => {
 			let (contents, file_name) = if let Some(contents) = contents {
@@ -103,9 +107,9 @@ fn main() -> Result<()> {
 			};
 
 			if interpreter {
-				eggscript::run_eggscript_program(&contents, &file_name)?;
+				eggscript::run_eggscript_program(&contents, &file_name, debug)?;
 			} else {
-				llvm::run_llvm_program(&contents, &file_name)?;
+				llvm::run_llvm_program(&contents, &file_name, debug)?;
 			}
 		}
 	}

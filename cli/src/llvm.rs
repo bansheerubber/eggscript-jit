@@ -122,8 +122,14 @@ pub fn compile_llvm_program(contents: &str, file_name: &str) -> Result<LLVMCompi
 
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
-			let (units, llvm_function) =
-				lower_function(&context, &builder, &module, program.clone(), function, false)?;
+			let (units, llvm_function) = lower_function(
+				&context,
+				&builder,
+				&module,
+				program.clone(),
+				function,
+				false,
+			)?;
 
 			let type_store = program.type_store.lock().unwrap();
 
@@ -169,20 +175,25 @@ pub fn compile_llvm_program(contents: &str, file_name: &str) -> Result<LLVMCompi
 type EntryFunction = unsafe extern "C" fn();
 
 #[allow(dead_code)]
-pub fn run_llvm_program(contents: &str, file_name: &str) -> Result<()> {
+pub fn run_llvm_program(contents: &str, file_name: &str, debug: bool) -> Result<()> {
 	let program = parse_string(contents, file_name)?;
 
-	println!("{}", program.global_scope.deref());
+	if debug {
+		println!("{}", program.global_scope.deref());
 
-	for function in program.functions.iter() {
-		println!("{}", function.deref());
+		for function in program.functions.iter() {
+			println!("{}", function.deref());
+		}
+
+		println!("{}", "Global program".yellow());
 	}
 
-	println!("{}", "Global program".yellow());
-
 	let (ast_context, units) = compile_expression(program.clone(), program.global_scope.clone())?;
-	for unit in units.iter() {
-		println!("{}", unit);
+
+	if debug {
+		for unit in units.iter() {
+			println!("{}", unit);
+		}
 	}
 
 	let context = Context::create();
@@ -196,8 +207,11 @@ pub fn run_llvm_program(contents: &str, file_name: &str) -> Result<()> {
 
 	let entry = llvm_context.compile_to_ir(&units, None)?;
 	llvm_context.optimize_ir();
-	println!("{}", "LLVM IR".yellow());
-	println!("{}", entry.print_to_string().to_string_lossy());
+
+	if debug {
+		println!("{}", "LLVM IR".yellow());
+		println!("{}", entry.print_to_string().to_string_lossy());
+	}
 
 	let engine = module
 		.create_jit_execution_engine(OptimizationLevel::Default)
@@ -207,11 +221,19 @@ pub fn run_llvm_program(contents: &str, file_name: &str) -> Result<()> {
 
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
-			let (_, function) =
-				lower_function(&context, &builder, &module, program.clone(), function, true)?;
+			let (_, function) = lower_function(
+				&context,
+				&builder,
+				&module,
+				program.clone(),
+				function,
+				debug,
+			)?;
 
-			println!("{}", "LLVM IR".yellow());
-			println!("{}", function.print_to_string().to_string_lossy());
+			if debug {
+				println!("{}", "LLVM IR".yellow());
+				println!("{}", function.print_to_string().to_string_lossy());
+			}
 		} else {
 			let function_declaration = module.get_function(&function.name).unwrap();
 			engine.add_global_mapping(

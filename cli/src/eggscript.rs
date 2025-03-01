@@ -144,30 +144,37 @@ pub fn compile_eggscript_program(
 }
 
 #[allow(dead_code)]
-pub fn run_eggscript_program(contents: &str, file_name: &str) -> Result<()> {
+pub fn run_eggscript_program(contents: &str, file_name: &str, debug: bool) -> Result<()> {
 	let program = parse_string(contents, file_name)?;
 
-	println!("{}", program.global_scope.deref());
+	if debug {
+		println!("{}", program.global_scope.deref());
 
-	for function in program.functions.iter() {
-		println!("{}", function.deref());
+		for function in program.functions.iter() {
+			println!("{}", function.deref());
+		}
+
+		println!("{}", "Global program".yellow());
 	}
 
-	println!("{}", "Global program".yellow());
-
 	let (ast_context, units) = compile_expression(program.clone(), program.global_scope.clone())?;
-	for unit in units.iter() {
-		println!("{}", unit);
+
+	if debug {
+		for unit in units.iter() {
+			println!("{}", unit);
+		}
 	}
 
 	let mut eggscript_context: EggscriptLowerContext = ast_context.into();
 	let instructions = eggscript_context.compile_to_eggscript(&units, None)?;
 
-	for instruction in instructions.iter() {
-		println!("{:?}", instruction);
-	}
+	if debug {
+		for instruction in instructions.iter() {
+			println!("{:?}", instruction);
+		}
 
-	println!("");
+		println!("");
+	}
 
 	let mut interpreter = Interpreter::new(instructions);
 
@@ -175,11 +182,13 @@ pub fn run_eggscript_program(contents: &str, file_name: &str) -> Result<()> {
 
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
-			let (_, instructions) = lower_function(program.clone(), function, true)?;
-			for instruction in instructions.iter() {
-				println!("{:?}", instruction);
+			let (_, instructions) = lower_function(program.clone(), function, debug)?;
+			if debug {
+				for instruction in instructions.iter() {
+					println!("{:?}", instruction);
+				}
+				println!("");
 			}
-			println!("");
 
 			interpreter.add_function(eggscript_interpreter::Function::new_eggscript_function(
 				function.id,
@@ -199,9 +208,10 @@ pub fn run_eggscript_program(contents: &str, file_name: &str) -> Result<()> {
 
 	interpreter.run();
 
-	println!("Results:");
-
-	interpreter.print_stack();
+	if debug {
+		println!("Results:");
+		interpreter.print_stack();
+	}
 
 	Ok(())
 }
