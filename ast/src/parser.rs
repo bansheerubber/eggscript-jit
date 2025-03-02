@@ -1,13 +1,18 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use eggscript_types::{TypeHandle, TypeStore, P};
+use pest::error::{Error, ErrorVariant, LineColLocation};
 use pest::iterators::Pairs;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
 use pest_derive::Parser;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
 use crate::expressions::Expression;
+use crate::pretty_error::{
+	print_blank, print_dots, print_error_header, print_line_with_correction,
+	print_line_with_squiggle,
+};
 use crate::{Function, FunctionArgument, Span};
 
 pub fn configure_pratt() -> PrattParser<Rule> {
@@ -87,11 +92,92 @@ pub fn parse_string(contents: &str, file_name: &str) -> Result<P<Program>> {
 			Arc::new(Mutex::new(TypeStore::new())),
 			pairs,
 		)?)),
-		Err(error) => panic!("{:?}", error),
+		Err(error) => {
+			attempt_print_pest_error(error, contents, file_name);
+			bail!("Could not parse string")
+		}
 	}
 }
 
 pub fn parse_file(file_name: &str) -> Result<P<Program>> {
 	let contents = std::fs::read_to_string(file_name).context("Could not read file")?;
 	return parse_string(&contents, file_name);
+}
+
+fn get_lines(contents: &str, start: usize, stop: usize) -> BTreeMap<usize, String> {
+	let lines = contents
+		.split('\n')
+		.map(str::to_string)
+		.collect::<Vec<String>>();
+
+	let mut mapping = BTreeMap::new();
+
+	let start = isize::max(0, start as isize - 1) as usize;
+	let stop = isize::min(lines.len() as isize - 1, stop as isize - 1) as usize;
+
+	let mut key = start;
+	for line in &lines[start..=stop] {
+		mapping.insert(key + 1, line.into());
+		key += 1;
+	}
+
+	return mapping;
+}
+
+fn get_line_number(location: &LineColLocation) -> usize {
+	match location {
+		LineColLocation::Pos((start_line, _)) => *start_line,
+		LineColLocation::Span((start_line, _), _) => *start_line,
+	}
+}
+
+fn attempt_print_pest_error(error: Error<Rule>, contents: &str, file_name: &str) {
+	let ErrorVariant::ParsingError {
+		positives,
+		negatives: _,
+	} = &error.variant
+	else {
+		panic!("unknown error {:?}", error);
+	};
+
+	if positives[0] == Rule::function_return_type_ident {
+		print_error_header(
+			"missing return type after colon in function declaration",
+			file_name,
+		);
+
+		let line_number = get_line_number(&error.line_col);
+		let lines = get_lines(contents, line_number - 1, line_number + 1);
+		print_line_with_squiggle(lines, &error.line_col, "type name expected here", -2);
+
+		print_dots();
+		print_line_with_correction(error.line(), &error.line_col, " type_name ", "like this");
+		print_blank();
+	} else if positives[0] == Rule::type_ident {
+		print_error_header(
+			"missing type after colon in variable declaration",
+			file_name,
+		);
+
+		let line_number = get_line_number(&error.line_col);
+		let lines = get_lines(contents, line_number - 1, line_number + 1);
+		print_line_with_squiggle(lines, &error.line_col, "type name expected here", -2);
+
+		print_dots();
+		print_line_with_correction(
+			error.line(),
+			&error.line_col,
+			" type_name ",
+			"like this (or remove colon for implicit type declaration)",
+		);
+		print_blank();
+	} else {
+		print_error_header("unknown error during parsing", file_name);
+
+		let line_number = get_line_number(&error.line_col);
+		let lines = get_lines(contents, line_number - 1, line_number + 1);
+		print_line_with_squiggle(lines, &error.line_col, "syntax parser stopped here", 0);
+
+		print_blank();
+	}
 }

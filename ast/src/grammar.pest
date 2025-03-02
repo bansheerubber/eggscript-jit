@@ -78,12 +78,17 @@ function_arg_variable_ident = { variable_ident }
 function_arg = { function_arg_variable_ident ~ ":" ~ type_ident }
 function_arg_list = { (function_arg ~ ",")* ~ function_arg? }
 function_name = { ident }
-function_return_type = { ":" ~ type_ident }
+
+function_return_type_ident = @{ type_ident }
+function_return_type = { ":" ~ function_return_type_ident }
+
 function_declaration = { "function" ~ function_name ~ "(" ~ function_arg_list ~ ")" ~ function_return_type? ~ "{" ~ block_inner ~ "}" }
 
-return_statement = { "return" ~ math? ~ ";" }
+semicolon = _{ ";" }
 
-line = _{ return_statement | (variable_declaration ~ ";") | (expression ~ ";") }
+return_statement = { "return" ~ math? ~ semicolon }
+
+line = _{ return_statement | (variable_declaration ~ semicolon) | (expression ~ semicolon) }
 body = _{ function_declaration | if_block | while_block | loop_block | for_block | line }
 
 program = _{ SOI ~ body+ ~ EOI }

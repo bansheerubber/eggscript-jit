@@ -5,6 +5,7 @@ mod expressions;
 mod lower;
 mod operators;
 mod parser;
+mod pretty_error;
 mod symbol;
 
 pub(crate) use context::AstContext;
