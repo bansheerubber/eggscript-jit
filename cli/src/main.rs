@@ -1,6 +1,8 @@
 mod eggscript;
 mod llvm;
 
+use std::process::exit;
+
 use anyhow::{Context, Result};
 use clap::Parser;
 
@@ -58,7 +60,7 @@ struct InterpreterOrLLVMGroup {
 	llvm: bool,
 }
 
-fn main() -> Result<()> {
+fn execute() -> Result<()> {
 	let args = Args::parse();
 	match args {
 		Args::Compile(CompileArgs {
@@ -110,6 +112,20 @@ fn main() -> Result<()> {
 				eggscript::run_eggscript_program(&contents, &file_name, debug)?;
 			} else {
 				llvm::run_llvm_program(&contents, &file_name, debug)?;
+			}
+		}
+	}
+
+	Ok(())
+}
+
+fn main() -> Result<()> {
+	match execute() {
+		Ok(_) => exit(0),
+		Err(error) => {
+			// TODO fix this jank
+			if error.to_string() == "Could not parse string" {
+				exit(1);
 			}
 		}
 	}

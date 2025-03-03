@@ -71,13 +71,17 @@ pub fn print_line_with_squiggle(
 	println!("{} {}", line_indicator, line);
 	println!("{} {}", blank_indicator, squiggle);
 
+	let mut printed_lines = false;
 	for (line_number, line) in lines.iter() {
 		if line_number > &start_line {
 			println!("{} {}", format!("{} |", line_number).blue(), line);
+			printed_lines = true;
 		}
 	}
 
-	println!("{}", blank_indicator);
+	if printed_lines {
+		println!("{}", blank_indicator);
+	}
 }
 
 pub fn print_dots() {
