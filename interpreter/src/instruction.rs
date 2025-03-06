@@ -61,6 +61,10 @@ pub enum Instruction {
 	),
 	CallFunction(FunctionHandle),
 	Return(bool),
+	IntegerUnary(
+		IntegerUnaryOperation,
+		RelativeStackAddress,
+	)
 }
 
 #[derive(Clone, Debug)]
@@ -101,4 +105,11 @@ pub enum DoubleMathOperation {
 	GreaterThan,
 	LessThanEqualTo,
 	GreaterThanEqualTo,
+}
+
+#[derive(Clone, Debug)]
+pub enum IntegerUnaryOperation {
+	BitwiseNot,
+	Minus,
+	Not,
 }

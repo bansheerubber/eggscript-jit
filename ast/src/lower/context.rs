@@ -62,8 +62,8 @@ impl AstLowerContext {
 			ExpressionInfo::Primitive(_, _) => self.lower_primitive(expression),
 			ExpressionInfo::Return(_) => self.lower_return_statement(expression),
 			ExpressionInfo::Scope(_) => self.lower_scope(expression),
+			ExpressionInfo::UnaryOperation(_, _) => self.lower_unary(expression),
 			ExpressionInfo::While(_, _) => self.lower_while_block(expression),
-			_ => unimplemented!("{:?}", expression.info),
 		}
 	}
 

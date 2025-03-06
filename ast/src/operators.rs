@@ -107,3 +107,13 @@ impl UnaryOperator {
 		})
 	}
 }
+
+impl Into<eggscript_mir::UnaryOperator> for &UnaryOperator {
+	fn into(self) -> eggscript_mir::UnaryOperator {
+		match self {
+			UnaryOperator::BitwiseNot => eggscript_mir::UnaryOperator::BitwiseNot,
+			UnaryOperator::Minus => eggscript_mir::UnaryOperator::Minus,
+			UnaryOperator::Not => eggscript_mir::UnaryOperator::Not,
+		}
+	}
+}

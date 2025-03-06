@@ -8,6 +8,7 @@ pub use instruction::AbsoluteStackAddress;
 pub use instruction::DoubleMathOperation;
 pub use instruction::Instruction;
 pub use instruction::IntegerMathOperation;
+pub use instruction::IntegerUnaryOperation;
 pub use instruction::RelativeStackAddress;
 pub use instruction::Value;
 pub use interpreter::Interpreter;

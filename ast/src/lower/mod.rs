@@ -7,6 +7,7 @@ mod if_block;
 mod primitive;
 mod return_statement;
 mod scope;
+mod unary;
 mod variable_assignment;
 mod while_block;
 

@@ -1,7 +1,7 @@
 use eggscript_types::P;
 use std::ops::Deref;
 
-use crate::{BinaryOperator, PrimitiveValue, Span, UnitHandle, Value};
+use crate::{operators::UnaryOperator, BinaryOperator, PrimitiveValue, Span, UnitHandle, Value};
 
 const INDENT: &str = "  ";
 
@@ -62,6 +62,13 @@ impl std::fmt::Display for MIR {
 				value.deref(),
 				rvalue.deref()
 			)),
+			MIRInfo::Unary(lvalue, rvalue, operator) => f.write_fmt(format_args!(
+				"{}{} = {}{};\n",
+				INDENT,
+				lvalue.deref(),
+				operator,
+				rvalue.deref()
+			)),
 		}
 	}
 }
@@ -74,9 +81,7 @@ impl MIR {
 		}
 	}
 
-	pub fn check_type() {
-
-	}
+	pub fn check_type() {}
 }
 
 #[derive(Debug)]
@@ -86,6 +91,7 @@ pub enum MIRInfo {
 	CallFunction(String, usize, Vec<P<Value>>, P<Value>),
 	StoreLiteral(P<Value>, PrimitiveValue),
 	StoreValue(P<Value>, P<Value>),
+	Unary(P<Value>, P<Value>, UnaryOperator),
 }
 
 #[derive(Clone, Debug)]

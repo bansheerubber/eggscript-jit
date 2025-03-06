@@ -507,6 +507,9 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				self.builder
 					.build_store(self.value_to_llvm_pointer_value(&lvalue)?, value)?;
 			}
+			MIRInfo::Unary(_, _, _) => {
+				todo!()
+			}
 		}
 
 		Ok(())

@@ -1,4 +1,4 @@
-use eggscript_interpreter::{DoubleMathOperation, IntegerMathOperation};
+use eggscript_interpreter::{DoubleMathOperation, IntegerMathOperation, IntegerUnaryOperation};
 
 #[derive(Clone, Eq, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -93,6 +93,33 @@ impl Into<DoubleMathOperation> for &BinaryOperator {
 			BinaryOperator::GreaterThan => DoubleMathOperation::GreaterThan,
 			BinaryOperator::LessThanEqualTo => DoubleMathOperation::LessThanEqualTo,
 			BinaryOperator::GreaterThanEqualTo => DoubleMathOperation::GreaterThanEqualTo,
+		}
+	}
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum UnaryOperator {
+	BitwiseNot,
+	Minus,
+	Not,
+}
+
+impl std::fmt::Display for UnaryOperator {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			UnaryOperator::BitwiseNot => f.write_str("~"),
+			UnaryOperator::Minus => f.write_str("-"),
+			UnaryOperator::Not => f.write_str("!"),
+		}
+	}
+}
+
+impl Into<IntegerUnaryOperation> for &UnaryOperator {
+	fn into(self) -> IntegerUnaryOperation {
+		match self {
+			UnaryOperator::BitwiseNot => IntegerUnaryOperation::BitwiseNot,
+			UnaryOperator::Minus => IntegerUnaryOperation::Minus,
+			UnaryOperator::Not => IntegerUnaryOperation::Not,
 		}
 	}
 }

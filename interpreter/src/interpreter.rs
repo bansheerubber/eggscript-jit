@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use crate::instruction::{DoubleMathOperation, Instruction, Value};
+use crate::instruction::{DoubleMathOperation, Instruction, IntegerUnaryOperation, Value};
 use crate::{Function, IntegerMathOperation};
 
 // extract values off of the stack based on isize stack index (negative means pop, positive means index into stack)
@@ -96,6 +96,8 @@ impl Interpreter {
 
 	fn interpret(&mut self) {
 		let instruction = &self.instructions[self.instruction_index];
+
+		self.print_stack();
 
 		match instruction {
 			Instruction::DoubleMath(operator, lvalue, rvalue) => {
@@ -300,6 +302,29 @@ impl Interpreter {
 
 				if let Some(value) = value {
 					self.push_stack(value.clone());
+				}
+			}
+			Instruction::IntegerUnary(operator, value_position) => {
+				let value = stack_extract!(self, *value_position);
+
+				let Value::Integer(value) = value else {
+					unreachable!();
+				};
+
+				match operator {
+					IntegerUnaryOperation::BitwiseNot => {
+						self.push_stack(Value::Integer(!value));
+					}
+					IntegerUnaryOperation::Minus => {
+						self.push_stack(Value::Integer(-value));
+					}
+					IntegerUnaryOperation::Not => {
+						if value == &0 {
+							self.push_stack(Value::Integer(1));
+						} else {
+							self.push_stack(Value::Integer(0));
+						}
+					}
 				}
 			}
 		}

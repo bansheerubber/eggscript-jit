@@ -92,7 +92,7 @@ impl CommonContext {
 							lvalue.ty(),
 							rvalue.get_type_from_type_store(&type_store),
 							&mir.span,
-							"lvaluve not compatible with rvalue",
+							"lvalue not compatible with rvalue",
 						);
 					}
 					MIRInfo::StoreValue(lvalue, rvalue) => {
@@ -101,9 +101,10 @@ impl CommonContext {
 							lvalue.ty(),
 							rvalue.ty(),
 							&mir.span,
-							"lvaluve not compatible with rvalue",
+							"lvalue not compatible with rvalue",
 						);
 					}
+					MIRInfo::Unary(_, _, _) => {}
 				}
 			}
 		}
@@ -118,7 +119,7 @@ impl CommonContext {
 		message: &str,
 	) {
 		if !type_store.are_types_compatible(type1, type2) {
-			println!("{}", message);
+			println!("{} ({} != {})", message, type1, type2);
 			println!("{}", self.print_span(span));
 			panic!();
 		}

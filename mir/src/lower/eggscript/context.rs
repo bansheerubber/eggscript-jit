@@ -303,6 +303,40 @@ impl EggscriptLowerContext {
 					)])
 				}
 			}
+			MIRInfo::Unary(result, rvalue, operator) => {
+				let type_store = self.common_context.type_store.lock().unwrap();
+				let result_ty = type_store.get_type(result.ty()).unwrap();
+				let name = result_ty.get_name().unwrap();
+
+				let right_stack_address = match rvalue.deref() {
+					Value::Location { id, .. } => *self
+						.value_to_stack
+						.get(id)
+						.context("Could not get left value stack index")?
+						as RelativeStackAddress,
+					Value::Primitive { .. } => -1,
+					Value::Temp { .. } => -1, // TODO probably wrong
+				};
+
+				let mut instructions = vec![];
+
+				if let Value::Primitive { value, .. } = rvalue.deref() {
+					instructions.push(Instruction::Push(value.into()));
+				}
+
+				if name == "double" {
+					todo!();
+				} else if name == "int" {
+					instructions.push(Instruction::IntegerUnary(
+						operator.into(),
+						right_stack_address,
+					));
+				} else {
+					unreachable!();
+				}
+
+				return Ok(instructions);
+			}
 		}
 	}
 }
