@@ -14,7 +14,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::lower::CommonContext;
-use crate::{BinaryOperator, MIRInfo, PrimitiveValue, Transition, Unit, Value, MIR};
+use crate::{BinaryOperator, MIRInfo, PrimitiveValue, Transition, UnaryOperator, Unit, Value, MIR};
 
 pub struct LlvmLowerContext<'a, 'ctx> {
 	pub(crate) builder: &'a Builder<'ctx>,
@@ -507,8 +507,14 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				self.builder
 					.build_store(self.value_to_llvm_pointer_value(&lvalue)?, value)?;
 			}
-			MIRInfo::Unary(_, _, _) => {
-				todo!()
+			MIRInfo::Unary(result_value, rvalue, operator) => {
+				let result = match operator {
+					UnaryOperator::BitwiseNot => self.build_bitwise_not(result_value, rvalue)?,
+					UnaryOperator::Minus => self.build_neg(result_value, rvalue)?,
+					UnaryOperator::Not => self.build_not(result_value, rvalue)?,
+				};
+
+				self.value_to_basic_value.insert(result_value.id(), result);
 			}
 		}
 

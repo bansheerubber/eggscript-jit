@@ -229,30 +229,117 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			unreachable!();
 		};
 
+		let result = match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Double => self.builder.build_float_compare(
+					self.binary_operator_to_float_cmp(op),
+					self.value_to_llvm_float_value(left_operand)?,
+					self.value_to_llvm_float_value(right_operand)?,
+					&format!("cmp_result{}_", result_value.id()),
+				)?,
+				Primitive::I64 => self.builder.build_int_compare(
+					self.binary_operator_to_int_cmp(op),
+					self.value_to_llvm_int_value(left_operand)?,
+					self.value_to_llvm_int_value(right_operand)?,
+					&format!("cmp_result{}_", result_value.id()),
+				)?,
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		};
+
+		return Ok(self
+			.builder
+			.build_int_z_extend(result, self.context.i64_type(), "z_extend_")?
+			.into());
+	}
+
+	pub fn build_bitwise_not(
+		&mut self,
+		result_value: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
 				Primitive::Char => todo!(),
-				Primitive::Double => Ok(self
-					.builder
-					.build_float_compare(
-						self.binary_operator_to_float_cmp(op),
-						self.value_to_llvm_float_value(left_operand)?,
-						self.value_to_llvm_float_value(right_operand)?,
-						&format!("cmp_result{}_", result_value.id()),
-					)?
-					.into()),
+				Primitive::Double => todo!(),
 				Primitive::I64 => Ok(self
 					.builder
-					.build_int_compare(
-						self.binary_operator_to_int_cmp(op),
-						self.value_to_llvm_int_value(left_operand)?,
-						self.value_to_llvm_int_value(right_operand)?,
-						&format!("cmp_result{}_", result_value.id()),
+					.build_not(
+						self.value_to_llvm_int_value(rvalue)?,
+						&format!("not_result{}_", result_value.id()),
 					)?
 					.into()),
 				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
+	}
+
+	pub fn build_neg(
+		&mut self,
+		result_value: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
+		match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Double => todo!(),
+				Primitive::I64 => Ok(self
+					.builder
+					.build_int_neg(
+						self.value_to_llvm_int_value(rvalue)?,
+						&format!("neg_result{}_", result_value.id()),
+					)?
+					.into()),
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		}
+	}
+
+	pub fn build_not(
+		&mut self,
+		result_value: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
+		let result = match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Double => todo!(),
+				Primitive::I64 => self.builder.build_int_compare(
+					IntPredicate::EQ,
+					self.context.i64_type().const_zero(),
+					self.value_to_llvm_int_value(rvalue)?,
+					&format!("not_result{}_", result_value.id()),
+				)?,
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		};
+
+		return Ok(self
+			.builder
+			.build_int_z_extend(result, self.context.i64_type(), "z_extend_")?
+			.into());
 	}
 }
