@@ -84,6 +84,7 @@ impl Expression {
 
 		let type_store = context.type_store.lock().unwrap();
 		let double = type_store.name_to_type_handle("double");
+		let int = type_store.name_to_type_handle("int");
 		drop(type_store);
 
 		program.add_native_function(
@@ -96,6 +97,16 @@ impl Expression {
 			double.unwrap(),
 		);
 
+		program.add_native_function(
+			vec![FunctionArgument {
+				name: "value".into(),
+				span: Span::new(0, 0),
+				ty: int,
+			}],
+			"printInt",
+			int.unwrap(),
+		);
+
 		Ok(program)
 	}
 
@@ -104,13 +115,14 @@ impl Expression {
 		pair: Pair<Rule>,
 	) -> Option<Result<P<Expression>>> {
 		match pair.as_rule() {
+			Rule::double_literal => Some(Expression::parse_double_literal(context, pair)),
 			Rule::else_block => Some(Expression::parse_else_block(context, pair)),
 			Rule::field_access => Some(Expression::parse_field_access(context, pair)),
 			Rule::for_block => Some(Expression::parse_for_block(context, pair)),
 			Rule::function_call => Some(Expression::parse_function_call(context, pair)),
 			Rule::if_block => Some(Expression::parse_if_block(context, pair)),
+			Rule::integer_literal => Some(Expression::parse_integer_literal(context, pair)),
 			Rule::math => Some(Expression::parse_math(context, pair)),
-			Rule::number_literal => Some(Expression::parse_number_literal(context, pair)),
 			Rule::return_statement => Some(Expression::parse_return_statement(context, pair)),
 			Rule::string_literal => Some(Expression::parse_string_literal(context, pair)),
 			Rule::variable_assignment => Some(Expression::parse_variable_assignment(context, pair)),

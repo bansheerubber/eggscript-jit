@@ -58,6 +58,23 @@ impl Type {
 			Type::Unknown { id, .. } => *id,
 		}
 	}
+
+	pub fn get_info(&self) -> Option<&KnownTypeInfo> {
+		match self {
+			Type::Known { info, .. } => Some(info),
+			_ => None,
+		}
+	}
+
+	pub fn is_primitive(&self) -> bool {
+		match self {
+			Type::Known { info, .. } => match info {
+				KnownTypeInfo::Primitive(_) => true,
+				_ => false,
+			},
+			_ => false,
+		}
+	}
 }
 
 pub type TypeHandle = usize;
@@ -85,9 +102,15 @@ impl TypeStore {
 
 		type_store.create_type(Type::Known {
 			id: 0,
+			info: KnownTypeInfo::Primitive(Primitive::I64),
+			name: "int".into(),
+		});
+
+		/*type_store.create_type(Type::Known {
+			id: 0,
 			info: KnownTypeInfo::Primitive(Primitive::String),
 			name: "string".into(),
-		});
+		});*/
 
 		type_store.create_type(Type::Known {
 			id: 0,

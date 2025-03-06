@@ -1,45 +1,21 @@
 use std::sync::Mutex;
 
-use crate::Value;
-
-pub fn print_double2(value: f64) {
+pub fn print_double(value: f64) {
 	println!("{}", value);
 }
 
-pub fn print_double(values: Vec<Value>) -> Value {
-	if values.len() == 0 {
-		return Value::Null;
-	}
-
-	match values.first().unwrap() {
-		Value::Boolean(value) => println!("{}", value),
-		Value::Double(value) => println!("{}", value),
-		Value::Integer(value) => println!("{}", value),
-		Value::Null => println!("null"),
-	}
-
-	Value::Null
+pub fn print_int(value: i64) {
+	println!("{}", value);
 }
 
 static TEST_PRINT_BUFFER: Mutex<Vec<String>> = Mutex::new(vec![]);
 
-pub fn test_print2(value: f64) {
+pub fn test_print_double(value: f64) {
 	TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value))
 }
 
-pub fn test_print(values: Vec<Value>) -> Value {
-	if values.len() == 0 {
-		return Value::Null;
-	}
-
-	match values.first().unwrap() {
-		Value::Boolean(value) => TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value)),
-		Value::Double(value) => TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value)),
-		Value::Integer(value) => TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value)),
-		Value::Null => TEST_PRINT_BUFFER.lock().unwrap().push("null".into()),
-	}
-
-	Value::Null
+pub fn test_print_int(value: i64) {
+	TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value))
 }
 
 pub fn clear_test_print_buffer() {

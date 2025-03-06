@@ -155,21 +155,49 @@ impl Interpreter {
 
 				match operator {
 					IntegerMathOperation::Plus => self.push_stack(Value::Integer(lvalue + rvalue)),
-					IntegerMathOperation::Minus => todo!(),
-					IntegerMathOperation::Multiply => todo!(),
-					IntegerMathOperation::Divide => todo!(),
-					IntegerMathOperation::Modulus => todo!(),
-					IntegerMathOperation::BitwiseAnd => todo!(),
-					IntegerMathOperation::BitwiseOr => todo!(),
-					IntegerMathOperation::BitwiseXor => todo!(),
-					IntegerMathOperation::ShiftLeft => todo!(),
-					IntegerMathOperation::ShiftRight => todo!(),
-					IntegerMathOperation::Equal => todo!(),
-					IntegerMathOperation::NotEqual => todo!(),
-					IntegerMathOperation::LessThan => todo!(),
-					IntegerMathOperation::GreaterThan => todo!(),
-					IntegerMathOperation::LessThanEqualTo => todo!(),
-					IntegerMathOperation::GreaterThanEqualTo => todo!(),
+					IntegerMathOperation::Minus => self.push_stack(Value::Integer(lvalue - rvalue)),
+					IntegerMathOperation::Multiply => {
+						self.push_stack(Value::Integer(lvalue * rvalue))
+					}
+					IntegerMathOperation::Divide => {
+						self.push_stack(Value::Integer(lvalue / rvalue))
+					}
+					IntegerMathOperation::Modulus => {
+						self.push_stack(Value::Integer(lvalue % rvalue))
+					}
+					IntegerMathOperation::BitwiseAnd => {
+						self.push_stack(Value::Integer(lvalue & rvalue))
+					}
+					IntegerMathOperation::BitwiseOr => {
+						self.push_stack(Value::Integer(lvalue | rvalue))
+					}
+					IntegerMathOperation::BitwiseXor => {
+						self.push_stack(Value::Integer(lvalue ^ rvalue))
+					}
+					IntegerMathOperation::ShiftLeft => {
+						self.push_stack(Value::Integer(lvalue << rvalue))
+					}
+					IntegerMathOperation::ShiftRight => {
+						self.push_stack(Value::Integer(lvalue >> rvalue))
+					}
+					IntegerMathOperation::Equal => {
+						self.push_stack(Value::Boolean(lvalue == rvalue))
+					}
+					IntegerMathOperation::NotEqual => {
+						self.push_stack(Value::Boolean(lvalue != rvalue))
+					}
+					IntegerMathOperation::LessThan => {
+						self.push_stack(Value::Boolean(lvalue < rvalue))
+					}
+					IntegerMathOperation::GreaterThan => {
+						self.push_stack(Value::Boolean(lvalue > rvalue))
+					}
+					IntegerMathOperation::LessThanEqualTo => {
+						self.push_stack(Value::Boolean(lvalue <= rvalue))
+					}
+					IntegerMathOperation::GreaterThanEqualTo => {
+						self.push_stack(Value::Boolean(lvalue >= rvalue))
+					}
 				}
 			}
 			Instruction::Invalid => panic!("Invalid instruction"),

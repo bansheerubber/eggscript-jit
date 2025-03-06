@@ -170,7 +170,7 @@ impl EggscriptLowerContext {
 
 				Ok(vec![])
 			}
-			MIRInfo::BinaryOperation(_, left, right, operator) => {
+			MIRInfo::BinaryOperation(result, left, right, operator) => {
 				let mut instructions: Vec<Instruction> = Vec::new();
 
 				let left_stack_address = match left.deref() {
@@ -201,11 +201,25 @@ impl EggscriptLowerContext {
 					instructions.push(Instruction::Push(value.into()));
 				}
 
-				instructions.push(Instruction::DoubleMath(
-					operator.into(),
-					left_stack_address,
-					right_stack_address,
-				));
+				let type_store = self.common_context.type_store.lock().unwrap();
+				let result_ty = type_store.get_type(result.ty()).unwrap();
+				let name = result_ty.get_name().unwrap();
+
+				if name == "double" {
+					instructions.push(Instruction::DoubleMath(
+						operator.into(),
+						left_stack_address,
+						right_stack_address,
+					));
+				} else if name == "int" {
+					instructions.push(Instruction::IntegerMath(
+						operator.into(),
+						left_stack_address,
+						right_stack_address,
+					));
+				} else {
+					unreachable!();
+				}
 
 				Ok(instructions)
 			}

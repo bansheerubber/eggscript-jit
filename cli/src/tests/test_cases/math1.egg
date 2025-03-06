@@ -1,9 +1,9 @@
-%a = 5;
-%b = 1;
+%a = 5.0;
+%b = 1.0;
 
 function x(): double {
-	return 100;
+	return 100.0;
 }
 
-%result: double = %a * x() * x() + %b * x() + 59;
+%result: double = %a * x() * x() + %b * x() + 59.0;
 printDouble(%result);

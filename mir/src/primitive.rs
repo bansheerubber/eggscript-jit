@@ -31,7 +31,7 @@ impl PrimitiveValue {
 	pub fn get_type_from_type_store(&self, type_store: &TypeStore) -> TypeHandle {
 		match self {
 			PrimitiveValue::Double(_) => type_store.name_to_type_handle("double").unwrap(),
-			PrimitiveValue::Integer(_) => type_store.name_to_type_handle("integer").unwrap(),
+			PrimitiveValue::Integer(_) => type_store.name_to_type_handle("int").unwrap(),
 			PrimitiveValue::String(_) => type_store.name_to_type_handle("string").unwrap(),
 		}
 	}

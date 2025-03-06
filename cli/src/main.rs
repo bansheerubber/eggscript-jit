@@ -127,6 +127,8 @@ fn main() -> Result<()> {
 			if error.to_string() == "Could not parse string" {
 				exit(1);
 			}
+
+			Err(error)?
 		}
 	}
 

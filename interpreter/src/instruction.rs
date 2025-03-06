@@ -11,6 +11,32 @@ pub enum Value {
 	Null,
 }
 
+impl Value {
+	pub fn as_boolean(&self) -> bool {
+		if let Value::Boolean(value) = self {
+			return *value;
+		} else {
+			unreachable!();
+		}
+	}
+
+	pub fn as_double(&self) -> f64 {
+		if let Value::Double(value) = self {
+			return *value;
+		} else {
+			unreachable!();
+		}
+	}
+
+	pub fn as_int(&self) -> i64 {
+		if let Value::Integer(value) = self {
+			return *value;
+		} else {
+			unreachable!();
+		}
+	}
+}
+
 #[derive(Clone, Debug)]
 pub enum Instruction {
 	Invalid,

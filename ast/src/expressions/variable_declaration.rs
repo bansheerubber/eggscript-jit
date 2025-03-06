@@ -27,7 +27,11 @@ impl Expression {
 			.as_rule()
 		{
 			let type_pair = inner.next().context("Could not get variable type")?;
-			type_store.name_to_type_handle(type_pair.as_str())
+			Some(
+				type_store
+					.name_to_type_handle(type_pair.as_str())
+					.context("Could not find type")?,
+			)
 		} else {
 			None
 		};
@@ -42,7 +46,9 @@ impl Expression {
 		)
 		.context("Could not parse pair")??;
 
-		let ty = if let None = ty && let Some(expression_ty) = expression.ty {
+		let ty = if let None = ty
+			&& let Some(expression_ty) = expression.ty
+		{
 			Some(expression_ty)
 		} else if let None = ty {
 			Some(context.type_store.lock().unwrap().create_unknown())

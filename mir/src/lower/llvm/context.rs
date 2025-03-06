@@ -6,8 +6,8 @@ use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
-use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, PointerValue};
-use inkwell::{context, FloatPredicate, OptimizationLevel};
+use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, IntValue, PointerValue};
+use inkwell::{context, OptimizationLevel};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::Path;
@@ -17,12 +17,12 @@ use crate::lower::CommonContext;
 use crate::{BinaryOperator, MIRInfo, PrimitiveValue, Transition, Unit, Value, MIR};
 
 pub struct LlvmLowerContext<'a, 'ctx> {
-	builder: &'a Builder<'ctx>,
-	common_context: CommonContext,
-	context: &'ctx context::Context,
-	module: &'a Module<'ctx>,
-	units_to_blocks: HashMap<usize, BasicBlock<'ctx>>,
-	value_to_basic_value: HashMap<usize, BasicValueEnum<'ctx>>,
+	pub(crate) builder: &'a Builder<'ctx>,
+	pub(crate) common_context: CommonContext,
+	pub(crate) context: &'ctx context::Context,
+	pub(crate) module: &'a Module<'ctx>,
+	pub(crate) units_to_blocks: HashMap<usize, BasicBlock<'ctx>>,
+	pub(crate) value_to_basic_value: HashMap<usize, BasicValueEnum<'ctx>>,
 }
 
 impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
@@ -193,10 +193,13 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
 
 					if i + 1 >= units.len() {
-						if function.is_some() {
+						if let Some(function) = function {
 							// TODO fix type issue
-							self.builder
-								.build_return(Some(&self.context.f64_type().const_zero()))?;
+							self.builder.build_return(Some(
+								&self
+									.type_to_llvm_basic_type(function.return_type.unwrap())
+									.const_zero(),
+							))?;
 						}
 
 						continue;
@@ -210,10 +213,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
 
+					println!("{:?}", value);
+
 					if let Some(value) = value {
 						// TODO fix type issue
 						self.builder
-							.build_return(Some(&self.value_to_llvm_float_value(value)?))?;
+							.build_return(Some(&self.maybe_deref_llvm_value(value)?))?;
 					} else {
 						self.builder.build_return(None)?;
 					}
@@ -249,7 +254,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		Ok(())
 	}
 
-	fn value_to_llvm_float_value(&self, value: &P<Value>) -> Result<FloatValue<'ctx>> {
+	pub(crate) fn value_to_llvm_float_value(&self, value: &P<Value>) -> Result<FloatValue<'ctx>> {
 		match value.deref() {
 			Value::Location { .. } => Ok(self
 				.builder
@@ -283,6 +288,77 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		}
 	}
 
+	pub(crate) fn value_to_llvm_int_value(&self, value: &P<Value>) -> Result<IntValue<'ctx>> {
+		match value.deref() {
+			Value::Location { .. } => Ok(self
+				.builder
+				.build_load(
+					self.context.i64_type(),
+					self.value_to_llvm_pointer_value(value)?,
+					"temp_",
+				)?
+				.into_int_value()),
+			Value::Primitive { value, .. } => match value {
+				PrimitiveValue::Double(_) => unreachable!(),
+				PrimitiveValue::Integer(value) => {
+					Ok(self.context.i64_type().const_int(*value as u64, false))
+				}
+				PrimitiveValue::String(_) => unreachable!(),
+			},
+			Value::Temp { id, .. } => {
+				let basic_value = self.value_to_basic_value.get(id).unwrap();
+
+				if basic_value.is_pointer_value() {
+					Ok(self
+						.builder
+						.build_load(
+							self.context.i64_type(),
+							self.value_to_llvm_pointer_value(value)?,
+							"temp_",
+						)?
+						.into_int_value())
+				} else {
+					Ok(basic_value.into_int_value())
+				}
+			}
+		}
+	}
+
+	pub(crate) fn maybe_deref_llvm_value(&self, value: &P<Value>) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let is_primitive = type_store.get_type(value.ty()).unwrap().is_primitive();
+		drop(type_store);
+
+		match value.deref() {
+			Value::Location { id, .. } | Value::Temp { id, .. } => {
+				let basic_value = self.value_to_basic_value.get(id).unwrap();
+				if is_primitive && basic_value.is_pointer_value() {
+					return Ok(self
+						.builder
+						.build_load(
+							self.type_to_llvm_basic_type(value.ty()),
+							self.value_to_llvm_pointer_value(value)?,
+							"temp_",
+						)?
+						.into());
+				}
+
+				return Ok(basic_value.clone());
+			}
+			Value::Primitive { value, .. } => match value {
+				PrimitiveValue::Double(value) => {
+					Ok(self.context.f64_type().const_float(*value).into())
+				}
+				PrimitiveValue::Integer(value) => Ok(self
+					.context
+					.i64_type()
+					.const_int(*value as u64, false)
+					.into()),
+				PrimitiveValue::String(_) => unreachable!(),
+			},
+		}
+	}
+
 	fn value_to_llvm_pointer_value(&self, value: &P<Value>) -> Result<PointerValue<'ctx>> {
 		Ok(self
 			.value_to_basic_value
@@ -310,9 +386,10 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 	fn lower_mir(&mut self, mir: &MIR, function: FunctionValue<'ctx>) -> Result<()> {
 		match &mir.info {
 			MIRInfo::Allocate(value, argument_position) => {
-				let alloca = self
-					.builder
-					.build_alloca(self.context.f64_type(), &format!("variable{}_", value.id()))?;
+				let alloca = self.builder.build_alloca(
+					self.type_to_llvm_basic_type(value.ty()),
+					&format!("variable{}_", value.id()),
+				)?;
 
 				if let Some(argument_position) = argument_position {
 					let params = function.get_params();
@@ -325,145 +402,37 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 				self.value_to_basic_value.insert(value.id(), alloca.into());
 			}
-			MIRInfo::BinaryOperation(value, left_operand, right_operand, operator) => {
+			MIRInfo::BinaryOperation(result_value, left_operand, right_operand, operator) => {
 				match operator {
 					BinaryOperator::Plus => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_add(
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("add_result{}_", value.id()),
-								)?
-								.into(),
-						);
+						let result = self.build_add(result_value, left_operand, right_operand)?;
+						self.value_to_basic_value.insert(result_value.id(), result);
 					}
 					BinaryOperator::Minus => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_sub(
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("sub_result{}_", value.id()),
-								)?
-								.into(),
-						);
+						let result = self.build_sub(result_value, left_operand, right_operand)?;
+						self.value_to_basic_value.insert(result_value.id(), result);
 					}
 					BinaryOperator::Multiply => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_mul(
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("mul_result{}_", value.id()),
-								)?
-								.into(),
-						);
+						let result = self.build_mul(result_value, left_operand, right_operand)?;
+						self.value_to_basic_value.insert(result_value.id(), result);
 					}
 					BinaryOperator::Divide => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_div(
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("div_result{}_", value.id()),
-								)?
-								.into(),
-						);
+						let result = self.build_div(result_value, left_operand, right_operand)?;
+						self.value_to_basic_value.insert(result_value.id(), result);
 					}
 					BinaryOperator::Modulus => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_rem(
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("mod_result{}_", value.id()),
-								)?
-								.into(),
-						);
+						let result = self.build_rem(result_value, left_operand, right_operand)?;
+						self.value_to_basic_value.insert(result_value.id(), result);
 					}
-					BinaryOperator::Equal => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_compare(
-									FloatPredicate::OEQ,
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("eq_result{}_", value.id()),
-								)?
-								.into(),
-						);
-					}
-					BinaryOperator::NotEqual => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_compare(
-									FloatPredicate::ONE,
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("ne_result{}_", value.id()),
-								)?
-								.into(),
-						);
-					}
-					BinaryOperator::LessThan => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_compare(
-									FloatPredicate::OLT,
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("lt_result{}_", value.id()),
-								)?
-								.into(),
-						);
-					}
-					BinaryOperator::GreaterThan => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_compare(
-									FloatPredicate::OGT,
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("gt_result{}_", value.id()),
-								)?
-								.into(),
-						);
-					}
-					BinaryOperator::LessThanEqualTo => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_compare(
-									FloatPredicate::OLE,
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("le_result{}_", value.id()),
-								)?
-								.into(),
-						);
-					}
-					BinaryOperator::GreaterThanEqualTo => {
-						self.value_to_basic_value.insert(
-							value.id(),
-							self.builder
-								.build_float_compare(
-									FloatPredicate::OGE,
-									self.value_to_llvm_float_value(left_operand)?,
-									self.value_to_llvm_float_value(right_operand)?,
-									&format!("ge_result{}_", value.id()),
-								)?
-								.into(),
-						);
+					BinaryOperator::Equal
+					| BinaryOperator::NotEqual
+					| BinaryOperator::LessThan
+					| BinaryOperator::GreaterThan
+					| BinaryOperator::LessThanEqualTo
+					| BinaryOperator::GreaterThanEqualTo => {
+						let result =
+							self.build_cmp(result_value, left_operand, right_operand, operator)?;
+						self.value_to_basic_value.insert(result_value.id(), result);
 					}
 					_ => todo!(),
 				}
@@ -477,7 +446,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				let mut args = vec![];
 				for argument in arguments.iter() {
 					// TODO fix type issue
-					args.push(self.value_to_llvm_float_value(argument)?.into());
+					args.push(self.maybe_deref_llvm_value(argument)?.into());
 				}
 
 				let type_store = self.common_context.type_store.lock().unwrap();

@@ -80,10 +80,10 @@ impl AstLowerContext {
 		let (mut conditional_units, conditional_value) = self.lower_expression(conditional)?;
 		let (mut block_units, _) = self.lower_block(code).context("Could not lower block")?;
 
-		let conditional_units_start = conditional_units[0];
-
 		let mut units = vec![];
-		units.append(&mut conditional_units);
+		if conditional_units.len() > 0 {
+			units.append(&mut conditional_units);
+		}
 
 		let jump_unit = self.unit_store.new_unit(
 			vec![],
@@ -103,7 +103,9 @@ impl AstLowerContext {
 				.new_unit(vec![], Transition::Goto(unit_after)),
 		);
 
-		Ok((units, conditional_value, conditional_units_start, jump_unit))
+		let conditional_unit_start = units[0];
+
+		Ok((units, conditional_value, conditional_unit_start, jump_unit))
 	}
 
 	fn lower_else_block_impl(
