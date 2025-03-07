@@ -7,7 +7,7 @@ use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
 use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, IntValue, PointerValue};
-use inkwell::{context, OptimizationLevel};
+use inkwell::{context, IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::Path;
@@ -168,8 +168,15 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					let value = self.value_to_basic_value.get(&value.id()).unwrap();
 					let then_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
-					self.builder.build_conditional_branch(
+					let value = self.builder.build_int_compare(
+						IntPredicate::EQ,
 						value.into_int_value(),
+						self.context.i64_type().const_int(1, false),
+						"cast_",
+					)?;
+
+					self.builder.build_conditional_branch(
+						value,
 						*then_block,
 						*self.units_to_blocks.get(else_unit).unwrap(),
 					)?;
@@ -181,8 +188,15 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					let value = self.value_to_basic_value.get(&value.id()).unwrap();
 					let else_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
-					self.builder.build_conditional_branch(
+					let value = self.builder.build_int_compare(
+						IntPredicate::EQ,
 						value.into_int_value(),
+						self.context.i64_type().const_int(1, false),
+						"cast_",
+					)?;
+
+					self.builder.build_conditional_branch(
+						value,
 						*self.units_to_blocks.get(then_unit).unwrap(),
 						*else_block,
 					)?;
@@ -212,8 +226,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				Transition::Return(value) => {
 					self.builder
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
-
-					println!("{:?}", value);
 
 					if let Some(value) = value {
 						// TODO fix type issue
