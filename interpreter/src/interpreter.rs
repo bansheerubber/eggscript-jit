@@ -94,10 +94,58 @@ impl Interpreter {
 		self.functions.push(function);
 	}
 
+	pub fn double_math(&mut self, operator: DoubleMathOperation, lvalue: f64, rvalue: f64) {
+		match operator {
+			DoubleMathOperation::Plus => self.push_stack(Value::Double(lvalue + rvalue)),
+			DoubleMathOperation::Minus => self.push_stack(Value::Double(lvalue - rvalue)),
+			DoubleMathOperation::Multiply => self.push_stack(Value::Double(lvalue * rvalue)),
+			DoubleMathOperation::Divide => self.push_stack(Value::Double(lvalue / rvalue)),
+			DoubleMathOperation::Modulus => self.push_stack(Value::Double(lvalue % rvalue)),
+			DoubleMathOperation::BitwiseAnd => todo!(),
+			DoubleMathOperation::BitwiseOr => todo!(),
+			DoubleMathOperation::BitwiseXor => todo!(),
+			DoubleMathOperation::ShiftLeft => todo!(),
+			DoubleMathOperation::ShiftRight => todo!(),
+			DoubleMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
+			DoubleMathOperation::NotEqual => self.push_stack(Value::Boolean(lvalue != rvalue)),
+			DoubleMathOperation::LessThan => self.push_stack(Value::Boolean(lvalue < rvalue)),
+			DoubleMathOperation::GreaterThan => self.push_stack(Value::Boolean(lvalue > rvalue)),
+			DoubleMathOperation::LessThanEqualTo => {
+				self.push_stack(Value::Boolean(lvalue <= rvalue))
+			}
+			DoubleMathOperation::GreaterThanEqualTo => {
+				self.push_stack(Value::Boolean(lvalue >= rvalue))
+			}
+		}
+	}
+
+	pub fn integer_math(&mut self, operator: IntegerMathOperation, lvalue: i64, rvalue: i64) {
+		match operator {
+			IntegerMathOperation::Plus => self.push_stack(Value::Integer(lvalue + rvalue)),
+			IntegerMathOperation::Minus => self.push_stack(Value::Integer(lvalue - rvalue)),
+			IntegerMathOperation::Multiply => self.push_stack(Value::Integer(lvalue * rvalue)),
+			IntegerMathOperation::Divide => self.push_stack(Value::Integer(lvalue / rvalue)),
+			IntegerMathOperation::Modulus => self.push_stack(Value::Integer(lvalue % rvalue)),
+			IntegerMathOperation::BitwiseAnd => self.push_stack(Value::Integer(lvalue & rvalue)),
+			IntegerMathOperation::BitwiseOr => self.push_stack(Value::Integer(lvalue | rvalue)),
+			IntegerMathOperation::BitwiseXor => self.push_stack(Value::Integer(lvalue ^ rvalue)),
+			IntegerMathOperation::ShiftLeft => self.push_stack(Value::Integer(lvalue << rvalue)),
+			IntegerMathOperation::ShiftRight => self.push_stack(Value::Integer(lvalue >> rvalue)),
+			IntegerMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
+			IntegerMathOperation::NotEqual => self.push_stack(Value::Boolean(lvalue != rvalue)),
+			IntegerMathOperation::LessThan => self.push_stack(Value::Boolean(lvalue < rvalue)),
+			IntegerMathOperation::GreaterThan => self.push_stack(Value::Boolean(lvalue > rvalue)),
+			IntegerMathOperation::LessThanEqualTo => {
+				self.push_stack(Value::Boolean(lvalue <= rvalue))
+			}
+			IntegerMathOperation::GreaterThanEqualTo => {
+				self.push_stack(Value::Boolean(lvalue >= rvalue))
+			}
+		}
+	}
+
 	fn interpret(&mut self) {
 		let instruction = &self.instructions[self.instruction_index];
-
-		self.print_stack();
 
 		match instruction {
 			Instruction::DoubleMath(operator, lvalue, rvalue) => {
@@ -112,36 +160,20 @@ impl Interpreter {
 					unreachable!();
 				};
 
-				match operator {
-					DoubleMathOperation::Plus => self.push_stack(Value::Double(lvalue + rvalue)),
-					DoubleMathOperation::Minus => self.push_stack(Value::Double(lvalue - rvalue)),
-					DoubleMathOperation::Multiply => {
-						self.push_stack(Value::Double(lvalue * rvalue))
-					}
-					DoubleMathOperation::Divide => self.push_stack(Value::Double(lvalue / rvalue)),
-					DoubleMathOperation::Modulus => self.push_stack(Value::Double(lvalue % rvalue)),
-					DoubleMathOperation::BitwiseAnd => todo!(),
-					DoubleMathOperation::BitwiseOr => todo!(),
-					DoubleMathOperation::BitwiseXor => todo!(),
-					DoubleMathOperation::ShiftLeft => todo!(),
-					DoubleMathOperation::ShiftRight => todo!(),
-					DoubleMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
-					DoubleMathOperation::NotEqual => {
-						self.push_stack(Value::Boolean(lvalue != rvalue))
-					}
-					DoubleMathOperation::LessThan => {
-						self.push_stack(Value::Boolean(lvalue < rvalue))
-					}
-					DoubleMathOperation::GreaterThan => {
-						self.push_stack(Value::Boolean(lvalue > rvalue))
-					}
-					DoubleMathOperation::LessThanEqualTo => {
-						self.push_stack(Value::Boolean(lvalue <= rvalue))
-					}
-					DoubleMathOperation::GreaterThanEqualTo => {
-						self.push_stack(Value::Boolean(lvalue >= rvalue))
-					}
-				}
+				self.double_math(*operator, *lvalue, *rvalue);
+			}
+			Instruction::ImmediateDoubleMath(operator, lvalue, rvalue) => {
+				let rvalue = stack_extract!(self, *rvalue);
+
+				let Value::Double(lvalue) = lvalue else {
+					unreachable!();
+				};
+
+				let Value::Double(rvalue) = rvalue else {
+					unreachable!();
+				};
+
+				self.double_math(*operator, *lvalue, *rvalue);
 			}
 			Instruction::IntegerMath(operator, lvalue, rvalue) => {
 				let rvalue = stack_extract!(self, *rvalue);
@@ -155,52 +187,20 @@ impl Interpreter {
 					unreachable!();
 				};
 
-				match operator {
-					IntegerMathOperation::Plus => self.push_stack(Value::Integer(lvalue + rvalue)),
-					IntegerMathOperation::Minus => self.push_stack(Value::Integer(lvalue - rvalue)),
-					IntegerMathOperation::Multiply => {
-						self.push_stack(Value::Integer(lvalue * rvalue))
-					}
-					IntegerMathOperation::Divide => {
-						self.push_stack(Value::Integer(lvalue / rvalue))
-					}
-					IntegerMathOperation::Modulus => {
-						self.push_stack(Value::Integer(lvalue % rvalue))
-					}
-					IntegerMathOperation::BitwiseAnd => {
-						self.push_stack(Value::Integer(lvalue & rvalue))
-					}
-					IntegerMathOperation::BitwiseOr => {
-						self.push_stack(Value::Integer(lvalue | rvalue))
-					}
-					IntegerMathOperation::BitwiseXor => {
-						self.push_stack(Value::Integer(lvalue ^ rvalue))
-					}
-					IntegerMathOperation::ShiftLeft => {
-						self.push_stack(Value::Integer(lvalue << rvalue))
-					}
-					IntegerMathOperation::ShiftRight => {
-						self.push_stack(Value::Integer(lvalue >> rvalue))
-					}
-					IntegerMathOperation::Equal => {
-						self.push_stack(Value::Boolean(lvalue == rvalue))
-					}
-					IntegerMathOperation::NotEqual => {
-						self.push_stack(Value::Boolean(lvalue != rvalue))
-					}
-					IntegerMathOperation::LessThan => {
-						self.push_stack(Value::Boolean(lvalue < rvalue))
-					}
-					IntegerMathOperation::GreaterThan => {
-						self.push_stack(Value::Boolean(lvalue > rvalue))
-					}
-					IntegerMathOperation::LessThanEqualTo => {
-						self.push_stack(Value::Boolean(lvalue <= rvalue))
-					}
-					IntegerMathOperation::GreaterThanEqualTo => {
-						self.push_stack(Value::Boolean(lvalue >= rvalue))
-					}
-				}
+				self.integer_math(*operator, *lvalue, *rvalue);
+			}
+			Instruction::ImmediateIntegerMath(operator, lvalue, rvalue) => {
+				let rvalue = stack_extract!(self, *rvalue);
+
+				let Value::Integer(lvalue) = lvalue else {
+					unreachable!();
+				};
+
+				let Value::Integer(rvalue) = rvalue else {
+					unreachable!();
+				};
+
+				self.integer_math(*operator, *lvalue, *rvalue);
 			}
 			Instruction::Invalid => panic!("Invalid instruction"),
 			Instruction::Noop => {}

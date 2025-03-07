@@ -193,10 +193,6 @@ impl EggscriptLowerContext {
 					Value::Temp { .. } => -1, // TODO probably wrong
 				};
 
-				if let Value::Primitive { value, .. } = left.deref() {
-					instructions.push(Instruction::Push(value.into()));
-				}
-
 				if let Value::Primitive { value, .. } = right.deref() {
 					instructions.push(Instruction::Push(value.into()));
 				}
@@ -205,20 +201,39 @@ impl EggscriptLowerContext {
 				let result_ty = type_store.get_type(result.ty()).unwrap();
 				let name = result_ty.get_name().unwrap();
 
-				if name == "double" {
-					instructions.push(Instruction::DoubleMath(
-						operator.into(),
-						left_stack_address,
-						right_stack_address,
-					));
-				} else if name == "int" {
-					instructions.push(Instruction::IntegerMath(
-						operator.into(),
-						left_stack_address,
-						right_stack_address,
-					));
+				// TODO clean up nested bullshit
+				if let Value::Primitive { value, .. } = left.deref() {
+					if name == "double" {
+						instructions.push(Instruction::ImmediateDoubleMath(
+							operator.into(),
+							value.into(),
+							right_stack_address,
+						));
+					} else if name == "int" {
+						instructions.push(Instruction::ImmediateIntegerMath(
+							operator.into(),
+							value.into(),
+							right_stack_address,
+						));
+					} else {
+						unreachable!();
+					}
 				} else {
-					unreachable!();
+					if name == "double" {
+						instructions.push(Instruction::DoubleMath(
+							operator.into(),
+							left_stack_address,
+							right_stack_address,
+						));
+					} else if name == "int" {
+						instructions.push(Instruction::IntegerMath(
+							operator.into(),
+							left_stack_address,
+							right_stack_address,
+						));
+					} else {
+						unreachable!();
+					}
 				}
 
 				Ok(instructions)

@@ -54,9 +54,19 @@ pub enum Instruction {
 		RelativeStackAddress,
 		RelativeStackAddress,
 	),
+	ImmediateIntegerMath(
+		IntegerMathOperation,
+		Value,
+		RelativeStackAddress,
+	),
 	DoubleMath(
 		DoubleMathOperation,
 		RelativeStackAddress,
+		RelativeStackAddress,
+	),
+	ImmediateDoubleMath(
+		DoubleMathOperation,
+		Value,
 		RelativeStackAddress,
 	),
 	CallFunction(FunctionHandle),
@@ -65,7 +75,7 @@ pub enum Instruction {
 	DoubleUnary(DoubleUnaryOperation, RelativeStackAddress),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum IntegerMathOperation {
 	Plus,
 	Minus,
@@ -85,7 +95,7 @@ pub enum IntegerMathOperation {
 	GreaterThanEqualTo,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum DoubleMathOperation {
 	Plus,
 	Minus,
