@@ -154,6 +154,12 @@ impl CommonContext {
 							.or_default()
 							.push(lvalue.id());
 					}
+					MIRInfo::Unary(result, lvalue, _) => {
+						self.value_used_by
+							.entry(lvalue.id())
+							.or_default()
+							.push(result.id());
+					}
 					_ => {}
 				}
 			}

@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use crate::instruction::{DoubleMathOperation, Instruction, IntegerUnaryOperation, Value};
-use crate::{Function, IntegerMathOperation};
+use crate::{DoubleUnaryOperation, Function, IntegerMathOperation};
 
 // extract values off of the stack based on isize stack index (negative means pop, positive means index into stack)
 macro_rules! stack_extract {
@@ -320,6 +320,29 @@ impl Interpreter {
 					}
 					IntegerUnaryOperation::Not => {
 						if value == &0 {
+							self.push_stack(Value::Integer(1));
+						} else {
+							self.push_stack(Value::Integer(0));
+						}
+					}
+				}
+			}
+			Instruction::DoubleUnary(operator, value_position) => {
+				let value = stack_extract!(self, *value_position);
+
+				let Value::Double(value) = value else {
+					unreachable!();
+				};
+
+				match operator {
+					DoubleUnaryOperation::BitwiseNot => {
+						unreachable!()
+					}
+					DoubleUnaryOperation::Minus => {
+						self.push_stack(Value::Double(-value));
+					}
+					DoubleUnaryOperation::Not => {
+						if value == &0.0 {
 							self.push_stack(Value::Integer(1));
 						} else {
 							self.push_stack(Value::Integer(0));

@@ -1,4 +1,6 @@
-use eggscript_interpreter::{DoubleMathOperation, IntegerMathOperation, IntegerUnaryOperation};
+use eggscript_interpreter::{
+	DoubleMathOperation, DoubleUnaryOperation, IntegerMathOperation, IntegerUnaryOperation,
+};
 
 #[derive(Clone, Eq, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -120,6 +122,16 @@ impl Into<IntegerUnaryOperation> for &UnaryOperator {
 			UnaryOperator::BitwiseNot => IntegerUnaryOperation::BitwiseNot,
 			UnaryOperator::Minus => IntegerUnaryOperation::Minus,
 			UnaryOperator::Not => IntegerUnaryOperation::Not,
+		}
+	}
+}
+
+impl Into<DoubleUnaryOperation> for &UnaryOperator {
+	fn into(self) -> DoubleUnaryOperation {
+		match self {
+			UnaryOperator::BitwiseNot => DoubleUnaryOperation::BitwiseNot,
+			UnaryOperator::Minus => DoubleUnaryOperation::Minus,
+			UnaryOperator::Not => DoubleUnaryOperation::Not,
 		}
 	}
 }

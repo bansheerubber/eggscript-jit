@@ -61,10 +61,8 @@ pub enum Instruction {
 	),
 	CallFunction(FunctionHandle),
 	Return(bool),
-	IntegerUnary(
-		IntegerUnaryOperation,
-		RelativeStackAddress,
-	)
+	IntegerUnary(IntegerUnaryOperation, RelativeStackAddress),
+	DoubleUnary(DoubleUnaryOperation, RelativeStackAddress),
 }
 
 #[derive(Clone, Debug)]
@@ -109,6 +107,13 @@ pub enum DoubleMathOperation {
 
 #[derive(Clone, Debug)]
 pub enum IntegerUnaryOperation {
+	BitwiseNot,
+	Minus,
+	Not,
+}
+
+#[derive(Clone, Debug)]
+pub enum DoubleUnaryOperation {
 	BitwiseNot,
 	Minus,
 	Not,

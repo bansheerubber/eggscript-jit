@@ -325,7 +325,10 @@ impl EggscriptLowerContext {
 				}
 
 				if name == "double" {
-					todo!();
+					instructions.push(Instruction::DoubleUnary(
+						operator.into(),
+						right_stack_address,
+					));
 				} else if name == "int" {
 					instructions.push(Instruction::IntegerUnary(
 						operator.into(),

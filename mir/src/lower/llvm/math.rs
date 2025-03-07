@@ -297,7 +297,13 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
 				Primitive::Char => todo!(),
-				Primitive::Double => todo!(),
+				Primitive::Double => Ok(self
+					.builder
+					.build_float_neg(
+						self.value_to_llvm_float_value(rvalue)?,
+						&format!("neg_result{}_", result_value.id()),
+					)?
+					.into()),
 				Primitive::I64 => Ok(self
 					.builder
 					.build_int_neg(
@@ -325,7 +331,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		let result = match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
 				Primitive::Char => todo!(),
-				Primitive::Double => todo!(),
+				Primitive::Double => self.builder.build_float_compare(
+					FloatPredicate::OEQ,
+					self.context.f64_type().const_zero(),
+					self.value_to_llvm_float_value(rvalue)?,
+					&format!("not_result{}_", result_value.id()),
+				)?,
 				Primitive::I64 => self.builder.build_int_compare(
 					IntPredicate::EQ,
 					self.context.i64_type().const_zero(),
