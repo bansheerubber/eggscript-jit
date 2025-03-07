@@ -19,16 +19,18 @@ impl AstLowerContext {
 				expression.ty.context("Could not unwrap type")?,
 				PrimitiveValue::Double(
 					value
+						.trim()
 						.parse::<f64>()
-						.context(format!("Could not parse f64 {}", value))?,
+						.context(format!("Could not parse f64 '{}'", value))?,
 				),
 			),
 			eggscript_types::Primitive::I64 => self.value_store.new_primitive(
 				expression.ty.context("Could not unwrap type")?,
 				PrimitiveValue::Integer(
 					value
+						.trim()
 						.parse::<i64>()
-						.context(format!("Could not parse i64 {}", value))?,
+						.context(format!("Could not parse i64 '{}'", value))?,
 				),
 			),
 			eggscript_types::Primitive::String => todo!(),
