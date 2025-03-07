@@ -1,0 +1,35 @@
+printInt(5 - -1);
+printInt(5 * 3 - (1 + (35 / 2)));
+
+%a = 5;
+%b = 3;
+%c = 1;
+%d = 35;
+%e = 2;
+printInt(%a * %b - (%c + (%d / %e)));
+
+function a(): double {
+	return 5.0;
+}
+
+function b(): double {
+	return 3.0;
+}
+
+function c(): double {
+	return 1.0;
+}
+
+function d(): double {
+	return 35.0;
+}
+
+function e(): double {
+	return 2.0;
+}
+
+printDouble(a() * b() - (c() + (d() / e())) / -5.0);
+
+printDouble(-a() * 3.0);
+
+printInt(-%a * 2);
