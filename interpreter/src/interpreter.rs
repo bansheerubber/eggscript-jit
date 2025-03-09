@@ -1,8 +1,8 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use crate::instruction::{NumberMathOperation, Instruction, Value};
-use crate::{NumberUnaryOperation, Function};
+use crate::instruction::{Instruction, NumberMathOperation, Value};
+use crate::{Function, NumberUnaryOperation};
 
 // extract values off of the stack based on isize stack index (negative means pop, positive means index into stack)
 macro_rules! stack_extract {
@@ -101,11 +101,21 @@ impl Interpreter {
 			NumberMathOperation::Multiply => self.push_stack(Value::Number(lvalue * rvalue)),
 			NumberMathOperation::Divide => self.push_stack(Value::Number(lvalue / rvalue)),
 			NumberMathOperation::Modulus => self.push_stack(Value::Number(lvalue % rvalue)),
-			NumberMathOperation::BitwiseAnd => todo!(),
-			NumberMathOperation::BitwiseOr => todo!(),
-			NumberMathOperation::BitwiseXor => todo!(),
-			NumberMathOperation::ShiftLeft => todo!(),
-			NumberMathOperation::ShiftRight => todo!(),
+			NumberMathOperation::BitwiseAnd => {
+				self.push_stack(Value::Number((lvalue as i64 & rvalue as i64) as f64))
+			}
+			NumberMathOperation::BitwiseOr => {
+				self.push_stack(Value::Number((lvalue as i64 | rvalue as i64) as f64))
+			}
+			NumberMathOperation::BitwiseXor => {
+				self.push_stack(Value::Number((lvalue as i64 ^ rvalue as i64) as f64))
+			}
+			NumberMathOperation::ShiftLeft => {
+				self.push_stack(Value::Number(((lvalue as i64) << (rvalue as i64)) as f64))
+			}
+			NumberMathOperation::ShiftRight => {
+				self.push_stack(Value::Number((lvalue as i64 >> rvalue as i64) as f64))
+			}
 			NumberMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
 			NumberMathOperation::NotEqual => self.push_stack(Value::Boolean(lvalue != rvalue)),
 			NumberMathOperation::LessThan => self.push_stack(Value::Boolean(lvalue < rvalue)),
@@ -261,7 +271,7 @@ impl Interpreter {
 
 				match operator {
 					NumberUnaryOperation::BitwiseNot => {
-						unreachable!()
+						self.push_stack(Value::Number(!(*value as i64) as f64));
 					}
 					NumberUnaryOperation::Minus => {
 						self.push_stack(Value::Number(-value));
