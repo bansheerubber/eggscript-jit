@@ -6,7 +6,7 @@ use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
-use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, PointerValue};
 use inkwell::{context, IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -114,9 +114,8 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			Some(Type::FunctionReturn { .. }) => todo!(),
 			Some(Type::Known { info, .. }) => match info {
 				KnownTypeInfo::Primitive(primitive) => match primitive {
-					Primitive::Double => self.context.f64_type().into(),
+					Primitive::Number => self.context.f64_type().into(),
 					Primitive::Char => self.context.i8_type().into(),
-					Primitive::I64 => self.context.i64_type().into(),
 					Primitive::String => todo!(),
 					Primitive::Null => todo!(),
 				},
@@ -277,8 +276,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				)?
 				.into_float_value()),
 			Value::Primitive { value, .. } => match value {
-				PrimitiveValue::Double(value) => Ok(self.context.f64_type().const_float(*value)),
-				PrimitiveValue::Integer(_) => unreachable!(),
+				PrimitiveValue::Number(value) => Ok(self.context.f64_type().const_float(*value)),
 				PrimitiveValue::String(_) => unreachable!(),
 			},
 			Value::Temp { id, .. } => {
@@ -295,42 +293,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						.into_float_value())
 				} else {
 					Ok(basic_value.into_float_value())
-				}
-			}
-		}
-	}
-
-	pub(crate) fn value_to_llvm_int_value(&self, value: &P<Value>) -> Result<IntValue<'ctx>> {
-		match value.deref() {
-			Value::Location { .. } => Ok(self
-				.builder
-				.build_load(
-					self.context.i64_type(),
-					self.value_to_llvm_pointer_value(value)?,
-					"temp_",
-				)?
-				.into_int_value()),
-			Value::Primitive { value, .. } => match value {
-				PrimitiveValue::Double(_) => unreachable!(),
-				PrimitiveValue::Integer(value) => {
-					Ok(self.context.i64_type().const_int(*value as u64, false))
-				}
-				PrimitiveValue::String(_) => unreachable!(),
-			},
-			Value::Temp { id, .. } => {
-				let basic_value = self.value_to_basic_value.get(id).unwrap();
-
-				if basic_value.is_pointer_value() {
-					Ok(self
-						.builder
-						.build_load(
-							self.context.i64_type(),
-							self.value_to_llvm_pointer_value(value)?,
-							"temp_",
-						)?
-						.into_int_value())
-				} else {
-					Ok(basic_value.into_int_value())
 				}
 			}
 		}
@@ -358,14 +320,9 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				return Ok(basic_value.clone());
 			}
 			Value::Primitive { value, .. } => match value {
-				PrimitiveValue::Double(value) => {
+				PrimitiveValue::Number(value) => {
 					Ok(self.context.f64_type().const_float(*value).into())
 				}
-				PrimitiveValue::Integer(value) => Ok(self
-					.context
-					.i64_type()
-					.const_int(*value as u64, false)
-					.into()),
 				PrimitiveValue::String(_) => unreachable!(),
 			},
 		}
@@ -487,16 +444,10 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				self.alloc_llvm_value(value)?;
 
 				match primitive_value {
-					PrimitiveValue::Double(number) => {
+					PrimitiveValue::Number(number) => {
 						self.builder.build_store(
 							self.value_to_llvm_pointer_value(&value)?,
 							self.context.f64_type().const_float(*number),
-						)?;
-					}
-					PrimitiveValue::Integer(number) => {
-						self.builder.build_store(
-							self.value_to_llvm_pointer_value(&value)?,
-							self.context.i64_type().const_int(*number as u64, false),
 						)?;
 					}
 					PrimitiveValue::String(_) => todo!(),

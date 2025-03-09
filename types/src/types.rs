@@ -5,8 +5,7 @@ use crate::FunctionType;
 #[derive(Clone, Debug)]
 pub enum Primitive {
 	Char,
-	Double,
-	I64,
+	Number,
 	String,
 	Null,
 }
@@ -70,7 +69,6 @@ impl Type {
 		match self {
 			Type::Known { info, .. } => match info {
 				KnownTypeInfo::Primitive(_) => true,
-				_ => false,
 			},
 			_ => false,
 		}
@@ -96,14 +94,8 @@ impl TypeStore {
 
 		type_store.create_type(Type::Known {
 			id: 0,
-			info: KnownTypeInfo::Primitive(Primitive::Double),
-			name: "double".into(),
-		});
-
-		type_store.create_type(Type::Known {
-			id: 0,
-			info: KnownTypeInfo::Primitive(Primitive::I64),
-			name: "int".into(),
+			info: KnownTypeInfo::Primitive(Primitive::Number),
+			name: "number".into(),
 		});
 
 		/*type_store.create_type(Type::Known {

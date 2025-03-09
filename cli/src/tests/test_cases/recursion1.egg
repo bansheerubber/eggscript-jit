@@ -1,4 +1,4 @@
-function fib(%n: int): int {
+function fib(%n: number): number {
 	if (%n == 0) {
 		return 0;
 	} else if (%n == 1) {
@@ -8,4 +8,4 @@ function fib(%n: int): int {
 	}
 }
 
-printInt(fib(20));
+printNumber(fib(20));

@@ -203,14 +203,8 @@ impl EggscriptLowerContext {
 
 				// TODO clean up nested bullshit
 				if let Value::Primitive { value, .. } = left.deref() {
-					if name == "double" {
-						instructions.push(Instruction::ImmediateDoubleMath(
-							operator.into(),
-							value.into(),
-							right_stack_address,
-						));
-					} else if name == "int" {
-						instructions.push(Instruction::ImmediateIntegerMath(
+					if name == "number" {
+						instructions.push(Instruction::ImmediateNumberMath(
 							operator.into(),
 							value.into(),
 							right_stack_address,
@@ -219,14 +213,8 @@ impl EggscriptLowerContext {
 						unreachable!();
 					}
 				} else {
-					if name == "double" {
-						instructions.push(Instruction::DoubleMath(
-							operator.into(),
-							left_stack_address,
-							right_stack_address,
-						));
-					} else if name == "int" {
-						instructions.push(Instruction::IntegerMath(
+					if name == "number" {
+						instructions.push(Instruction::NumberMath(
 							operator.into(),
 							left_stack_address,
 							right_stack_address,
@@ -339,13 +327,8 @@ impl EggscriptLowerContext {
 					instructions.push(Instruction::Push(value.into()));
 				}
 
-				if name == "double" {
-					instructions.push(Instruction::DoubleUnary(
-						operator.into(),
-						right_stack_address,
-					));
-				} else if name == "int" {
-					instructions.push(Instruction::IntegerUnary(
+				if name == "number" {
+					instructions.push(Instruction::NumberUnary(
 						operator.into(),
 						right_stack_address,
 					));

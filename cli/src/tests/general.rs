@@ -168,10 +168,10 @@ fn math2() -> Result<()> {
 	let file_name = "./test_cases/math2.egg";
 
 	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["6", "-3", "-3", "18.7", "-15", "-10"], "interpreter");
+	assert_buffer(vec!["6", "-3.5", "-3.5", "18.7", "-15", "-10"], "interpreter");
 
 	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["6", "-3", "-3", "18.7", "-15", "-10"], "jit");
+	assert_buffer(vec!["6", "-3.5", "-3.5", "18.7", "-15", "-10"], "jit");
 
 	Ok(())
 }

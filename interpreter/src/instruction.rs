@@ -6,8 +6,7 @@ pub type RelativeStackAddress = isize;
 #[derive(Clone, Debug)]
 pub enum Value {
 	Boolean(bool),
-	Double(f64),
-	Integer(i64),
+	Number(f64),
 	Null,
 }
 
@@ -20,16 +19,8 @@ impl Value {
 		}
 	}
 
-	pub fn as_double(&self) -> f64 {
-		if let Value::Double(value) = self {
-			return *value;
-		} else {
-			unreachable!();
-		}
-	}
-
-	pub fn as_int(&self) -> i64 {
-		if let Value::Integer(value) = self {
+	pub fn as_number(&self) -> f64 {
+		if let Value::Number(value) = self {
 			return *value;
 		} else {
 			unreachable!();
@@ -49,54 +40,23 @@ pub enum Instruction {
 	Jump(isize),
 	JumpIfFalse(isize, RelativeStackAddress),
 	JumpIfTrue(isize, RelativeStackAddress),
-	IntegerMath(
-		IntegerMathOperation,
+	NumberMath(
+		NumberMathOperation,
 		RelativeStackAddress,
 		RelativeStackAddress,
 	),
-	ImmediateIntegerMath(
-		IntegerMathOperation,
-		Value,
-		RelativeStackAddress,
-	),
-	DoubleMath(
-		DoubleMathOperation,
-		RelativeStackAddress,
-		RelativeStackAddress,
-	),
-	ImmediateDoubleMath(
-		DoubleMathOperation,
+	ImmediateNumberMath(
+		NumberMathOperation,
 		Value,
 		RelativeStackAddress,
 	),
 	CallFunction(FunctionHandle),
 	Return(bool),
-	IntegerUnary(IntegerUnaryOperation, RelativeStackAddress),
-	DoubleUnary(DoubleUnaryOperation, RelativeStackAddress),
+	NumberUnary(NumberUnaryOperation, RelativeStackAddress),
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum IntegerMathOperation {
-	Plus,
-	Minus,
-	Multiply,
-	Divide,
-	Modulus,
-	BitwiseAnd,
-	BitwiseOr,
-	BitwiseXor,
-	ShiftLeft,
-	ShiftRight,
-	Equal,
-	NotEqual,
-	LessThan,
-	GreaterThan,
-	LessThanEqualTo,
-	GreaterThanEqualTo,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum DoubleMathOperation {
+pub enum NumberMathOperation {
 	Plus,
 	Minus,
 	Multiply,
@@ -116,14 +76,7 @@ pub enum DoubleMathOperation {
 }
 
 #[derive(Clone, Debug)]
-pub enum IntegerUnaryOperation {
-	BitwiseNot,
-	Minus,
-	Not,
-}
-
-#[derive(Clone, Debug)]
-pub enum DoubleUnaryOperation {
+pub enum NumberUnaryOperation {
 	BitwiseNot,
 	Minus,
 	Not,

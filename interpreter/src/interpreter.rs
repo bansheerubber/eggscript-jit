@@ -1,8 +1,8 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use crate::instruction::{DoubleMathOperation, Instruction, IntegerUnaryOperation, Value};
-use crate::{DoubleUnaryOperation, Function, IntegerMathOperation};
+use crate::instruction::{NumberMathOperation, Instruction, Value};
+use crate::{NumberUnaryOperation, Function};
 
 // extract values off of the stack based on isize stack index (negative means pop, positive means index into stack)
 macro_rules! stack_extract {
@@ -94,51 +94,26 @@ impl Interpreter {
 		self.functions.push(function);
 	}
 
-	pub fn double_math(&mut self, operator: DoubleMathOperation, lvalue: f64, rvalue: f64) {
+	pub fn number_math(&mut self, operator: NumberMathOperation, lvalue: f64, rvalue: f64) {
 		match operator {
-			DoubleMathOperation::Plus => self.push_stack(Value::Double(lvalue + rvalue)),
-			DoubleMathOperation::Minus => self.push_stack(Value::Double(lvalue - rvalue)),
-			DoubleMathOperation::Multiply => self.push_stack(Value::Double(lvalue * rvalue)),
-			DoubleMathOperation::Divide => self.push_stack(Value::Double(lvalue / rvalue)),
-			DoubleMathOperation::Modulus => self.push_stack(Value::Double(lvalue % rvalue)),
-			DoubleMathOperation::BitwiseAnd => todo!(),
-			DoubleMathOperation::BitwiseOr => todo!(),
-			DoubleMathOperation::BitwiseXor => todo!(),
-			DoubleMathOperation::ShiftLeft => todo!(),
-			DoubleMathOperation::ShiftRight => todo!(),
-			DoubleMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
-			DoubleMathOperation::NotEqual => self.push_stack(Value::Boolean(lvalue != rvalue)),
-			DoubleMathOperation::LessThan => self.push_stack(Value::Boolean(lvalue < rvalue)),
-			DoubleMathOperation::GreaterThan => self.push_stack(Value::Boolean(lvalue > rvalue)),
-			DoubleMathOperation::LessThanEqualTo => {
+			NumberMathOperation::Plus => self.push_stack(Value::Number(lvalue + rvalue)),
+			NumberMathOperation::Minus => self.push_stack(Value::Number(lvalue - rvalue)),
+			NumberMathOperation::Multiply => self.push_stack(Value::Number(lvalue * rvalue)),
+			NumberMathOperation::Divide => self.push_stack(Value::Number(lvalue / rvalue)),
+			NumberMathOperation::Modulus => self.push_stack(Value::Number(lvalue % rvalue)),
+			NumberMathOperation::BitwiseAnd => todo!(),
+			NumberMathOperation::BitwiseOr => todo!(),
+			NumberMathOperation::BitwiseXor => todo!(),
+			NumberMathOperation::ShiftLeft => todo!(),
+			NumberMathOperation::ShiftRight => todo!(),
+			NumberMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
+			NumberMathOperation::NotEqual => self.push_stack(Value::Boolean(lvalue != rvalue)),
+			NumberMathOperation::LessThan => self.push_stack(Value::Boolean(lvalue < rvalue)),
+			NumberMathOperation::GreaterThan => self.push_stack(Value::Boolean(lvalue > rvalue)),
+			NumberMathOperation::LessThanEqualTo => {
 				self.push_stack(Value::Boolean(lvalue <= rvalue))
 			}
-			DoubleMathOperation::GreaterThanEqualTo => {
-				self.push_stack(Value::Boolean(lvalue >= rvalue))
-			}
-		}
-	}
-
-	pub fn integer_math(&mut self, operator: IntegerMathOperation, lvalue: i64, rvalue: i64) {
-		match operator {
-			IntegerMathOperation::Plus => self.push_stack(Value::Integer(lvalue + rvalue)),
-			IntegerMathOperation::Minus => self.push_stack(Value::Integer(lvalue - rvalue)),
-			IntegerMathOperation::Multiply => self.push_stack(Value::Integer(lvalue * rvalue)),
-			IntegerMathOperation::Divide => self.push_stack(Value::Integer(lvalue / rvalue)),
-			IntegerMathOperation::Modulus => self.push_stack(Value::Integer(lvalue % rvalue)),
-			IntegerMathOperation::BitwiseAnd => self.push_stack(Value::Integer(lvalue & rvalue)),
-			IntegerMathOperation::BitwiseOr => self.push_stack(Value::Integer(lvalue | rvalue)),
-			IntegerMathOperation::BitwiseXor => self.push_stack(Value::Integer(lvalue ^ rvalue)),
-			IntegerMathOperation::ShiftLeft => self.push_stack(Value::Integer(lvalue << rvalue)),
-			IntegerMathOperation::ShiftRight => self.push_stack(Value::Integer(lvalue >> rvalue)),
-			IntegerMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
-			IntegerMathOperation::NotEqual => self.push_stack(Value::Boolean(lvalue != rvalue)),
-			IntegerMathOperation::LessThan => self.push_stack(Value::Boolean(lvalue < rvalue)),
-			IntegerMathOperation::GreaterThan => self.push_stack(Value::Boolean(lvalue > rvalue)),
-			IntegerMathOperation::LessThanEqualTo => {
-				self.push_stack(Value::Boolean(lvalue <= rvalue))
-			}
-			IntegerMathOperation::GreaterThanEqualTo => {
+			NumberMathOperation::GreaterThanEqualTo => {
 				self.push_stack(Value::Boolean(lvalue >= rvalue))
 			}
 		}
@@ -148,61 +123,34 @@ impl Interpreter {
 		let instruction = &self.instructions[self.instruction_index];
 
 		match instruction {
-			Instruction::DoubleMath(operator, lvalue, rvalue) => {
+			Instruction::NumberMath(operator, lvalue, rvalue) => {
 				let rvalue = stack_extract!(self, *rvalue);
 				let lvalue = stack_extract!(self, *lvalue);
 
-				let Value::Double(lvalue) = lvalue else {
+				let Value::Number(lvalue) = lvalue else {
 					unreachable!();
 				};
 
-				let Value::Double(rvalue) = rvalue else {
+				let Value::Number(rvalue) = rvalue else {
 					unreachable!();
 				};
 
-				self.double_math(*operator, *lvalue, *rvalue);
+				self.number_math(*operator, *lvalue, *rvalue);
 			}
-			Instruction::ImmediateDoubleMath(operator, lvalue, rvalue) => {
+			Instruction::ImmediateNumberMath(operator, lvalue, rvalue) => {
 				let rvalue = stack_extract!(self, *rvalue);
 
-				let Value::Double(lvalue) = lvalue else {
+				let Value::Number(lvalue) = lvalue else {
 					unreachable!();
 				};
 
-				let Value::Double(rvalue) = rvalue else {
+				let Value::Number(rvalue) = rvalue else {
 					unreachable!();
 				};
 
-				self.double_math(*operator, *lvalue, *rvalue);
+				self.number_math(*operator, *lvalue, *rvalue);
 			}
-			Instruction::IntegerMath(operator, lvalue, rvalue) => {
-				let rvalue = stack_extract!(self, *rvalue);
-				let lvalue = stack_extract!(self, *lvalue);
-
-				let Value::Integer(lvalue) = lvalue else {
-					unreachable!();
-				};
-
-				let Value::Integer(rvalue) = rvalue else {
-					unreachable!();
-				};
-
-				self.integer_math(*operator, *lvalue, *rvalue);
-			}
-			Instruction::ImmediateIntegerMath(operator, lvalue, rvalue) => {
-				let rvalue = stack_extract!(self, *rvalue);
-
-				let Value::Integer(lvalue) = lvalue else {
-					unreachable!();
-				};
-
-				let Value::Integer(rvalue) = rvalue else {
-					unreachable!();
-				};
-
-				self.integer_math(*operator, *lvalue, *rvalue);
-			}
-			Instruction::Invalid => panic!("Invalid instruction"),
+			Instruction::Invalid => panic!("Invalid instructio"),
 			Instruction::Noop => {}
 			Instruction::Push(value) => {
 				self.push_stack(value.clone());
@@ -304,48 +252,25 @@ impl Interpreter {
 					self.push_stack(value.clone());
 				}
 			}
-			Instruction::IntegerUnary(operator, value_position) => {
+			Instruction::NumberUnary(operator, value_position) => {
 				let value = stack_extract!(self, *value_position);
 
-				let Value::Integer(value) = value else {
+				let Value::Number(value) = value else {
 					unreachable!();
 				};
 
 				match operator {
-					IntegerUnaryOperation::BitwiseNot => {
-						self.push_stack(Value::Integer(!value));
-					}
-					IntegerUnaryOperation::Minus => {
-						self.push_stack(Value::Integer(-value));
-					}
-					IntegerUnaryOperation::Not => {
-						if value == &0 {
-							self.push_stack(Value::Integer(1));
-						} else {
-							self.push_stack(Value::Integer(0));
-						}
-					}
-				}
-			}
-			Instruction::DoubleUnary(operator, value_position) => {
-				let value = stack_extract!(self, *value_position);
-
-				let Value::Double(value) = value else {
-					unreachable!();
-				};
-
-				match operator {
-					DoubleUnaryOperation::BitwiseNot => {
+					NumberUnaryOperation::BitwiseNot => {
 						unreachable!()
 					}
-					DoubleUnaryOperation::Minus => {
-						self.push_stack(Value::Double(-value));
+					NumberUnaryOperation::Minus => {
+						self.push_stack(Value::Number(-value));
 					}
-					DoubleUnaryOperation::Not => {
+					NumberUnaryOperation::Not => {
 						if value == &0.0 {
-							self.push_stack(Value::Integer(1));
+							self.push_stack(Value::Number(1.0));
 						} else {
-							self.push_stack(Value::Integer(0));
+							self.push_stack(Value::Number(0.0));
 						}
 					}
 				}

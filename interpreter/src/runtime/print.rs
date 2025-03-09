@@ -1,20 +1,12 @@
 use std::sync::Mutex;
 
-pub fn print_double(value: f64) {
-	println!("{}", value);
-}
-
-pub fn print_int(value: i64) {
+pub fn print_number(value: f64) {
 	println!("{}", value);
 }
 
 static TEST_PRINT_BUFFER: Mutex<Vec<String>> = Mutex::new(vec![]);
 
-pub fn test_print_double(value: f64) {
-	TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value))
-}
-
-pub fn test_print_int(value: i64) {
+pub fn test_print_number(value: f64) {
 	TEST_PRINT_BUFFER.lock().unwrap().push(format!("{}", value))
 }
 

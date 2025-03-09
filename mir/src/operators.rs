@@ -1,6 +1,4 @@
-use eggscript_interpreter::{
-	DoubleMathOperation, DoubleUnaryOperation, IntegerMathOperation, IntegerUnaryOperation,
-};
+use eggscript_interpreter::{NumberMathOperation, NumberUnaryOperation};
 
 #[derive(Clone, Eq, Debug, PartialEq)]
 pub enum BinaryOperator {
@@ -49,52 +47,27 @@ impl std::fmt::Display for BinaryOperator {
 	}
 }
 
-impl Into<IntegerMathOperation> for &BinaryOperator {
-	fn into(self) -> IntegerMathOperation {
+impl Into<NumberMathOperation> for &BinaryOperator {
+	fn into(self) -> NumberMathOperation {
 		match self {
-			BinaryOperator::Plus => IntegerMathOperation::Plus,
-			BinaryOperator::Minus => IntegerMathOperation::Minus,
-			BinaryOperator::Multiply => IntegerMathOperation::Multiply,
-			BinaryOperator::Divide => IntegerMathOperation::Divide,
-			BinaryOperator::Modulus => IntegerMathOperation::Minus,
-			BinaryOperator::BitwiseAnd => IntegerMathOperation::BitwiseAnd,
-			BinaryOperator::BitwiseOr => IntegerMathOperation::BitwiseOr,
-			BinaryOperator::BitwiseXor => IntegerMathOperation::BitwiseXor,
-			BinaryOperator::ShiftLeft => IntegerMathOperation::ShiftLeft,
-			BinaryOperator::ShiftRight => IntegerMathOperation::ShiftRight,
+			BinaryOperator::Plus => NumberMathOperation::Plus,
+			BinaryOperator::Minus => NumberMathOperation::Minus,
+			BinaryOperator::Multiply => NumberMathOperation::Multiply,
+			BinaryOperator::Divide => NumberMathOperation::Divide,
+			BinaryOperator::Modulus => NumberMathOperation::Minus,
+			BinaryOperator::BitwiseAnd => NumberMathOperation::BitwiseAnd,
+			BinaryOperator::BitwiseOr => NumberMathOperation::BitwiseOr,
+			BinaryOperator::BitwiseXor => NumberMathOperation::BitwiseXor,
+			BinaryOperator::ShiftLeft => NumberMathOperation::ShiftLeft,
+			BinaryOperator::ShiftRight => NumberMathOperation::ShiftRight,
 			BinaryOperator::LogicalAnd => todo!(),
 			BinaryOperator::LogicalOr => todo!(),
-			BinaryOperator::Equal => IntegerMathOperation::Equal,
-			BinaryOperator::NotEqual => IntegerMathOperation::NotEqual,
-			BinaryOperator::LessThan => IntegerMathOperation::LessThan,
-			BinaryOperator::GreaterThan => IntegerMathOperation::GreaterThan,
-			BinaryOperator::LessThanEqualTo => IntegerMathOperation::LessThanEqualTo,
-			BinaryOperator::GreaterThanEqualTo => IntegerMathOperation::GreaterThanEqualTo,
-		}
-	}
-}
-
-impl Into<DoubleMathOperation> for &BinaryOperator {
-	fn into(self) -> DoubleMathOperation {
-		match self {
-			BinaryOperator::Plus => DoubleMathOperation::Plus,
-			BinaryOperator::Minus => DoubleMathOperation::Minus,
-			BinaryOperator::Multiply => DoubleMathOperation::Multiply,
-			BinaryOperator::Divide => DoubleMathOperation::Divide,
-			BinaryOperator::Modulus => DoubleMathOperation::Minus,
-			BinaryOperator::BitwiseAnd => DoubleMathOperation::BitwiseAnd,
-			BinaryOperator::BitwiseOr => DoubleMathOperation::BitwiseOr,
-			BinaryOperator::BitwiseXor => DoubleMathOperation::BitwiseXor,
-			BinaryOperator::ShiftLeft => DoubleMathOperation::ShiftLeft,
-			BinaryOperator::ShiftRight => DoubleMathOperation::ShiftRight,
-			BinaryOperator::LogicalAnd => todo!(),
-			BinaryOperator::LogicalOr => todo!(),
-			BinaryOperator::Equal => DoubleMathOperation::Equal,
-			BinaryOperator::NotEqual => DoubleMathOperation::NotEqual,
-			BinaryOperator::LessThan => DoubleMathOperation::LessThan,
-			BinaryOperator::GreaterThan => DoubleMathOperation::GreaterThan,
-			BinaryOperator::LessThanEqualTo => DoubleMathOperation::LessThanEqualTo,
-			BinaryOperator::GreaterThanEqualTo => DoubleMathOperation::GreaterThanEqualTo,
+			BinaryOperator::Equal => NumberMathOperation::Equal,
+			BinaryOperator::NotEqual => NumberMathOperation::NotEqual,
+			BinaryOperator::LessThan => NumberMathOperation::LessThan,
+			BinaryOperator::GreaterThan => NumberMathOperation::GreaterThan,
+			BinaryOperator::LessThanEqualTo => NumberMathOperation::LessThanEqualTo,
+			BinaryOperator::GreaterThanEqualTo => NumberMathOperation::GreaterThanEqualTo,
 		}
 	}
 }
@@ -116,22 +89,12 @@ impl std::fmt::Display for UnaryOperator {
 	}
 }
 
-impl Into<IntegerUnaryOperation> for &UnaryOperator {
-	fn into(self) -> IntegerUnaryOperation {
+impl Into<NumberUnaryOperation> for &UnaryOperator {
+	fn into(self) -> NumberUnaryOperation {
 		match self {
-			UnaryOperator::BitwiseNot => IntegerUnaryOperation::BitwiseNot,
-			UnaryOperator::Minus => IntegerUnaryOperation::Minus,
-			UnaryOperator::Not => IntegerUnaryOperation::Not,
-		}
-	}
-}
-
-impl Into<DoubleUnaryOperation> for &UnaryOperator {
-	fn into(self) -> DoubleUnaryOperation {
-		match self {
-			UnaryOperator::BitwiseNot => DoubleUnaryOperation::BitwiseNot,
-			UnaryOperator::Minus => DoubleUnaryOperation::Minus,
-			UnaryOperator::Not => DoubleUnaryOperation::Not,
+			UnaryOperator::BitwiseNot => NumberUnaryOperation::BitwiseNot,
+			UnaryOperator::Minus => NumberUnaryOperation::Minus,
+			UnaryOperator::Not => NumberUnaryOperation::Not,
 		}
 	}
 }

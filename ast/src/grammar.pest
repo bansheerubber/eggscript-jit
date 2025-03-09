@@ -7,9 +7,9 @@ non_zero_digit = _{ '1'..'9' }
 digit = _{ '0'..'9' }
 special = _{ "_" }
 
-integer_literal = { (non_zero_digit ~ digit+) | digit }
-double_literal = { digit+ ~ "." ~ digit+ }
-number_literal = _{ double_literal | integer_literal }
+integer_literal = _{ (non_zero_digit ~ digit+) | digit }
+double_literal = _{ digit+ ~ "." ~ digit+ }
+number_literal = { double_literal | integer_literal }
 string_literal = @{ (("'") ~ ('\x00'..'\x26' | '\x28'..'\xFF')* ~ ("'")) | (("\"") ~ ('\x00'..'\x21' | '\x23'..'\xFF')* ~ ("\"")) }
 
 ident = _{ (alpha | special) ~ (alpha | digit | special)* }

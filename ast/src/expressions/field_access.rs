@@ -19,8 +19,8 @@ impl Expression {
 			.type_store
 			.lock()
 			.unwrap()
-			.name_to_type_handle("double")
-			.context("Could not get 'double' literal type")?;
+			.name_to_type_handle("number")
+			.context("Could not get 'number' literal type")?;
 
 		let variable_ident = Ident::new(&symbol, span);
 

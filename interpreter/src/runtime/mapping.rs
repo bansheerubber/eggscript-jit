@@ -7,17 +7,9 @@ pub fn get_native_function_mapping_for_interpreter() -> HashMap<String, NativeFu
 	let mut mapping: HashMap<String, NativeFunction> = HashMap::new();
 
 	mapping.insert(
-		"printDouble".to_string(),
+		"printNumber".to_string(),
 		Rc::new(|values| {
-			print::print_double(values.get(0).unwrap().as_double());
-			return Value::Null;
-		}),
-	);
-
-	mapping.insert(
-		"printInt".to_string(),
-		Rc::new(|values| {
-			print::print_int(values.get(0).unwrap().as_int());
+			print::print_number(values.get(0).unwrap().as_number());
 			return Value::Null;
 		}),
 	);
@@ -29,17 +21,9 @@ pub fn get_test_native_function_mapping_for_interpreter() -> HashMap<String, Nat
 	let mut mapping = get_native_function_mapping_for_interpreter();
 
 	mapping.insert(
-		"printDouble".to_string(),
+		"printNumber".to_string(),
 		Rc::new(|values| {
-			print::test_print_double(values.get(0).unwrap().as_double());
-			return Value::Null;
-		}),
-	);
-
-	mapping.insert(
-		"printInt".to_string(),
-		Rc::new(|values| {
-			print::test_print_int(values.get(0).unwrap().as_int());
+			print::test_print_number(values.get(0).unwrap().as_number());
 			return Value::Null;
 		}),
 	);
@@ -49,14 +33,12 @@ pub fn get_test_native_function_mapping_for_interpreter() -> HashMap<String, Nat
 
 pub fn get_native_function_mapping_for_jit() -> HashMap<String, usize> {
 	let mut mapping: HashMap<String, usize> = HashMap::new();
-	mapping.insert("printDouble".to_string(), print::print_double as usize);
-	mapping.insert("printInt".to_string(), print::print_int as usize);
+	mapping.insert("printNumber".to_string(), print::print_number as usize);
 	return mapping;
 }
 
 pub fn get_test_native_function_mapping_for_jit() -> HashMap<String, usize> {
 	let mut mapping: HashMap<String, usize> = HashMap::new();
-	mapping.insert("printDouble".to_string(), print::test_print_double as usize);
-	mapping.insert("printInt".to_string(), print::test_print_int as usize);
+	mapping.insert("printNumber".to_string(), print::test_print_number as usize);
 	return mapping;
 }
