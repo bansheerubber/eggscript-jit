@@ -5,20 +5,11 @@ pub type RelativeStackAddress = isize;
 
 #[derive(Clone, Debug)]
 pub enum Value {
-	Boolean(bool),
 	Number(f64),
 	Null,
 }
 
 impl Value {
-	pub fn as_boolean(&self) -> bool {
-		if let Value::Boolean(value) = self {
-			return *value;
-		} else {
-			unreachable!();
-		}
-	}
-
 	pub fn as_number(&self) -> f64 {
 		if let Value::Number(value) = self {
 			return *value;
@@ -45,11 +36,7 @@ pub enum Instruction {
 		RelativeStackAddress,
 		RelativeStackAddress,
 	),
-	ImmediateNumberMath(
-		NumberMathOperation,
-		Value,
-		RelativeStackAddress,
-	),
+	ImmediateNumberMath(NumberMathOperation, Value, RelativeStackAddress),
 	CallFunction(FunctionHandle),
 	Return(bool),
 	NumberUnary(NumberUnaryOperation, RelativeStackAddress),

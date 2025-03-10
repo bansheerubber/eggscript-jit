@@ -116,15 +116,23 @@ impl Interpreter {
 			NumberMathOperation::ShiftRight => {
 				self.push_stack(Value::Number((lvalue as i64 >> rvalue as i64) as f64))
 			}
-			NumberMathOperation::Equal => self.push_stack(Value::Boolean(lvalue == rvalue)),
-			NumberMathOperation::NotEqual => self.push_stack(Value::Boolean(lvalue != rvalue)),
-			NumberMathOperation::LessThan => self.push_stack(Value::Boolean(lvalue < rvalue)),
-			NumberMathOperation::GreaterThan => self.push_stack(Value::Boolean(lvalue > rvalue)),
+			NumberMathOperation::Equal => {
+				self.push_stack(Value::Number(if lvalue == rvalue { 1.0 } else { 0.0 }))
+			}
+			NumberMathOperation::NotEqual => {
+				self.push_stack(Value::Number(if lvalue != rvalue { 1.0 } else { 0.0 }))
+			}
+			NumberMathOperation::LessThan => {
+				self.push_stack(Value::Number(if lvalue < rvalue { 1.0 } else { 0.0 }))
+			}
+			NumberMathOperation::GreaterThan => {
+				self.push_stack(Value::Number(if lvalue > rvalue { 1.0 } else { 0.0 }))
+			}
 			NumberMathOperation::LessThanEqualTo => {
-				self.push_stack(Value::Boolean(lvalue <= rvalue))
+				self.push_stack(Value::Number(if lvalue <= rvalue { 1.0 } else { 0.0 }))
 			}
 			NumberMathOperation::GreaterThanEqualTo => {
-				self.push_stack(Value::Boolean(lvalue >= rvalue))
+				self.push_stack(Value::Number(if lvalue >= rvalue { 1.0 } else { 0.0 }))
 			}
 		}
 	}
@@ -188,8 +196,9 @@ impl Interpreter {
 			}
 			Instruction::JumpIfFalse(position, value_position) => {
 				let value = stack_extract!(self, *value_position);
-				if let Value::Boolean(true) = value {
-				} else {
+				if let Value::Number(value) = value
+					&& value == &0.0
+				{
 					self.instruction_index = self
 						.instruction_index
 						.checked_add_signed(*position)
@@ -200,7 +209,9 @@ impl Interpreter {
 			}
 			Instruction::JumpIfTrue(position, value_position) => {
 				let value = stack_extract!(self, *value_position);
-				if let Value::Boolean(true) = value {
+				if let Value::Number(value) = value
+					&& value != &0.0
+				{
 					self.instruction_index = self
 						.instruction_index
 						.checked_add_signed(*position)

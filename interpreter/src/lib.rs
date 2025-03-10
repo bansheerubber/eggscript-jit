@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 mod function;
 mod instruction;
 mod interpreter;
