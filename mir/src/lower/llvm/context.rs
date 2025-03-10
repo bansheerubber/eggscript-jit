@@ -58,21 +58,26 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		self.module.write_bitcode_to_path(Path::new("./test.bc"));
 	}
 
-	pub fn pre_define_function(&self, function: &FunctionType) {
+	pub fn pre_define_function(&self, function: &FunctionType) -> Result<()> {
 		let args = function
 			.argument_types
 			.iter()
-			.map(|arg_type| self.type_to_llvm_basic_type(*arg_type).into())
+			.map(|arg_type| self.type_to_llvm_basic_type(*arg_type))
+			.collect::<Result<Vec<BasicTypeEnum<'ctx>>>>()?
+			.iter()
+			.map(|ty| (*ty).into())
 			.collect::<Vec<BasicMetadataTypeEnum>>();
 
 		let fn_type = if let Some(return_type) = function.return_type {
-			self.type_to_llvm_basic_type(return_type)
+			self.type_to_llvm_basic_type(return_type)?
 				.fn_type(&args, false)
 		} else {
 			self.context.void_type().fn_type(&args, false)
 		};
 
 		self.module.add_function(&function.name, fn_type, None);
+
+		Ok(())
 	}
 
 	pub fn optimize_ir(&mut self) {
@@ -107,15 +112,20 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			.unwrap();
 	}
 
-	fn type_to_llvm_basic_type(&self, ty: TypeHandle) -> BasicTypeEnum<'ctx> {
+	fn type_to_llvm_basic_type(&self, ty: TypeHandle) -> Result<BasicTypeEnum<'ctx>> {
 		let type_store = self.common_context.type_store.lock().unwrap();
-		let ty = type_store.get_type(ty);
+		let ty = type_store.get_type(
+			type_store
+				.resolve_type(ty)
+				.context("Could not resolve type")?,
+		);
+
 		match ty {
 			Some(Type::FunctionReturn { .. }) => todo!(),
 			Some(Type::Known { info, .. }) => match info {
 				KnownTypeInfo::Primitive(primitive) => match primitive {
-					Primitive::Number => self.context.f64_type().into(),
-					Primitive::Char => self.context.i8_type().into(),
+					Primitive::Number => Ok(self.context.f64_type().into()),
+					Primitive::Char => Ok(self.context.i8_type().into()),
 					Primitive::String => todo!(),
 					Primitive::Null => todo!(),
 				},
@@ -208,7 +218,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 							// TODO fix type issue
 							self.builder.build_return(Some(
 								&self
-									.type_to_llvm_basic_type(function.return_type.unwrap())
+									.type_to_llvm_basic_type(function.return_type.unwrap())?
 									.const_zero(),
 							))?;
 						}
@@ -308,7 +318,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					return Ok(self
 						.builder
 						.build_load(
-							self.type_to_llvm_basic_type(value.ty()),
+							self.type_to_llvm_basic_type(value.ty())?,
 							self.value_to_llvm_pointer_value(value)?,
 							"temp_",
 						)?
@@ -340,7 +350,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				value.id(),
 				self.builder
 					.build_alloca(
-						self.type_to_llvm_basic_type(value.ty()),
+						self.type_to_llvm_basic_type(value.ty())?,
 						&format!("temp{}_", value.id()),
 					)?
 					.into(),
@@ -354,7 +364,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		match &mir.info {
 			MIRInfo::Allocate(value, argument_position) => {
 				let alloca = self.builder.build_alloca(
-					self.type_to_llvm_basic_type(value.ty()),
+					self.type_to_llvm_basic_type(value.ty())?,
 					&format!("variable{}_", value.id()),
 				)?;
 
@@ -487,7 +497,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				let value = self.value_to_basic_value.get(&rvalue.id()).unwrap();
 				let value = if value.is_pointer_value() {
 					self.builder.build_load(
-						self.type_to_llvm_basic_type(rvalue.ty()),
+						self.type_to_llvm_basic_type(rvalue.ty())?,
 						value.into_pointer_value(),
 						&format!("tmpforstore{}_", rvalue.id()),
 					)?

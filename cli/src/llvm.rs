@@ -105,7 +105,7 @@ pub fn compile_llvm_program(contents: &str, file_name: &str) -> Result<LLVMCompi
 	let mut llvm_context = ast_context.into_llvm_lower_context(&context, &builder, &module);
 
 	for function in program.functions.iter() {
-		llvm_context.pre_define_function(&function.ty);
+		llvm_context.pre_define_function(&function.ty)?;
 	}
 
 	let entry = llvm_context.compile_to_ir(&units, None)?;
@@ -202,7 +202,7 @@ pub fn run_llvm_program(contents: &str, file_name: &str, debug: bool) -> Result<
 	let mut llvm_context = ast_context.into_llvm_lower_context(&context, &builder, &module);
 
 	for function in program.functions.iter() {
-		llvm_context.pre_define_function(&function.ty);
+		llvm_context.pre_define_function(&function.ty)?;
 	}
 
 	let entry = llvm_context.compile_to_ir(&units, None)?;

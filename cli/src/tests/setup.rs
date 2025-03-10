@@ -74,7 +74,7 @@ pub fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
 	let mut llvm_context = ast_context.into_llvm_lower_context(&context, &builder, &module);
 
 	for function in program.functions.iter() {
-		llvm_context.pre_define_function(&function.ty);
+		llvm_context.pre_define_function(&function.ty)?;
 	}
 
 	llvm_context.compile_to_ir(&units, None)?;
