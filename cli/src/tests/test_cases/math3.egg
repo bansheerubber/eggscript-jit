@@ -28,3 +28,7 @@ printNumber(xor(10, 3));
 printNumber(shiftLeft(10, 3));
 printNumber(shiftRight(10, 3));
 printNumber(not(5));
+
+printNumber(!5);
+printNumber(!0);
+printNumber(!(-5));

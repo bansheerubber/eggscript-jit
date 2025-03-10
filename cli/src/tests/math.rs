@@ -43,10 +43,10 @@ fn math3() -> Result<()> {
 	let file_name = "./test_cases/math3.egg";
 
 	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["2", "11", "9", "80", "1", "-6"], "interpreter");
+	assert_buffer(vec!["2", "11", "9", "80", "1", "-6", "0", "1", "0"], "interpreter");
 
 	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["2", "11", "9", "80", "1", "-6"], "jit");
+	assert_buffer(vec!["2", "11", "9", "80", "1", "-6", "0", "1", "0"], "jit");
 
 	Ok(())
 }
