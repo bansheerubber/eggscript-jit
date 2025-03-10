@@ -263,7 +263,7 @@ impl Interpreter {
 					None
 				};
 
-				let old_frame = self.frames.pop().unwrap();
+				let old_frame = self.frames.pop().expect("Could not pop old frame");
 				self.instruction_index = old_frame.instruction_index;
 				self.instructions = old_frame.instructions;
 				self.stack_pointer = old_frame.stack_pointer - old_frame.argument_count;

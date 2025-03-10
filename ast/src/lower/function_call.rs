@@ -71,9 +71,9 @@ impl AstLowerContext {
 				self.program
 					.type_store
 					.lock()
-					.unwrap()
+					.expect("Could not lock type store")
 					.name_to_type_handle("null")
-					.unwrap(),
+					.expect("Could not find 'null' type"),
 			),
 		);
 

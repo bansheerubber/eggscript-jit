@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use eggscript_types::{FunctionType, TypeHandle, TypeStore};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -19,14 +20,18 @@ impl CommonContext {
 		}
 	}
 
-	pub fn type_check_units(&mut self, units: &Vec<Unit>, function: Option<&FunctionType>) {
-		let type_store = self.type_store.lock().unwrap();
+	pub fn type_check_units(
+		&mut self,
+		units: &Vec<Unit>,
+		function: Option<&FunctionType>,
+	) -> Result<()> {
+		let type_store = self.type_store.lock().expect("Could not lock type store");
 		for unit in units.iter() {
 			match &unit.transition {
 				Transition::Return(value) => {
 					assert!(function.is_some(), "return found in non-function unit");
 
-					let function = function.unwrap();
+					let function = function.context("Return found in non-function scope")?;
 
 					assert!(
 						function.return_type.is_some() == value.is_some(),
@@ -35,8 +40,12 @@ impl CommonContext {
 
 					if let Some(value) = value {
 						assert!(
-							type_store
-								.are_types_compatible(function.return_type.unwrap(), value.ty()),
+							type_store.are_types_compatible(
+								function
+									.return_type
+									.expect("Expected return type where there was none"),
+								value.ty()
+							),
 							"return types not compatible"
 						);
 					}
@@ -74,12 +83,12 @@ impl CommonContext {
 					}
 					MIRInfo::CallFunction(function_name, _, arguments, _) => {
 						let mut index = 0;
-						let function = type_store.get_function(function_name).unwrap();
+						let function = type_store.get_function(function_name).expect("Could not get function");
 						for argument in arguments.iter() {
 							self.type_check(
 								&type_store,
 								argument.ty(),
-								*function.argument_types.get(index).unwrap(),
+								*function.argument_types.get(index).expect("Could not get argument type"),
 								&mir.span,
 								&format!("argument #{} not compatible with value", index),
 							);
@@ -90,7 +99,7 @@ impl CommonContext {
 						self.type_check(
 							&type_store,
 							lvalue.ty(),
-							rvalue.get_type_from_type_store(&type_store),
+							rvalue.get_type_from_type_store(&type_store)?,
 							&mir.span,
 							"lvalue not compatible with rvalue",
 						);
@@ -108,6 +117,8 @@ impl CommonContext {
 				}
 			}
 		}
+
+		Ok(())
 	}
 
 	fn type_check(
@@ -167,7 +178,7 @@ impl CommonContext {
 	}
 
 	fn print_span(&self, span: &Span) -> String {
-		let contents = std::fs::read_to_string(&self.file_name).unwrap();
+		let contents = std::fs::read_to_string(&self.file_name).expect("Could not read file");
 		contents[span.start() as usize..span.end() as usize].into()
 	}
 }

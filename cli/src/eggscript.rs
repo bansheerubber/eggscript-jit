@@ -24,7 +24,7 @@ pub fn mir_to_vector_string(units: &Vec<Unit>) -> Vec<String> {
 		result.extend(block.split("\n").map(str::to_string));
 	}
 
-	if result.last().unwrap().len() == 0 {
+	if result.last().expect("Could not get last in vector").len() == 0 {
 		result.pop();
 	}
 
@@ -40,7 +40,11 @@ pub fn lower_function(
 	let (ast_context, units) = compile_function(
 		function.clone(),
 		program,
-		function.scope.as_ref().unwrap().clone(),
+		function
+			.scope
+			.as_ref()
+			.expect("Expected scope where there is none")
+			.clone(),
 	)?;
 
 	if debug {
@@ -104,14 +108,17 @@ pub fn compile_eggscript_program(
 	for function in program.functions.iter() {
 		if function.scope.is_some() {
 			let (units, instructions) = lower_function(program.clone(), function, false)?;
-			let type_store = program.type_store.lock().unwrap();
+			let type_store = program
+				.type_store
+				.lock()
+				.expect("Could not lock type store");
 
 			let return_ty = if let Some(return_ty) = function.return_ty {
 				type_store
 					.get_type(return_ty)
-					.unwrap()
+					.expect("Could not find argument type")
 					.get_name()
-					.unwrap()
+					.expect("Could not get type name")
 					.to_string()
 			} else {
 				"void".to_string()
@@ -123,10 +130,10 @@ pub fn compile_eggscript_program(
 					.iter()
 					.map(|argument| {
 						let type_name = type_store
-							.get_type(argument.ty.unwrap())
-							.unwrap()
+							.get_type(argument.ty)
+							.expect("Could not find argument type")
 							.get_name()
-							.unwrap();
+							.expect("Could not get type name");
 
 						return (argument.name.clone(), type_name.to_string());
 					})
@@ -200,7 +207,10 @@ pub fn run_eggscript_program(contents: &str, file_name: &str, debug: bool) -> Re
 			interpreter.add_function(eggscript_interpreter::Function::new_native(
 				function.id,
 				function.arguments.len(),
-				native_function_mapping.get(&function.name).unwrap().clone(),
+				native_function_mapping
+					.get(&function.name)
+					.expect("Could not get native function from map")
+					.clone(),
 				&function.name,
 			));
 		}

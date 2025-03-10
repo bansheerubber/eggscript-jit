@@ -9,7 +9,7 @@ pub fn get_native_function_mapping_for_interpreter() -> HashMap<String, NativeFu
 	mapping.insert(
 		"printNumber".to_string(),
 		Rc::new(|values| {
-			print::print_number(values.get(0).unwrap().as_number());
+			print::print_number(values.get(0).expect("Could not get argument 0").as_number());
 			return Value::Null;
 		}),
 	);
@@ -23,7 +23,7 @@ pub fn get_test_native_function_mapping_for_interpreter() -> HashMap<String, Nat
 	mapping.insert(
 		"printNumber".to_string(),
 		Rc::new(|values| {
-			print::test_print_number(values.get(0).unwrap().as_number());
+			print::test_print_number(values.get(0).expect("Could not get argument 0").as_number());
 			return Value::Null;
 		}),
 	);

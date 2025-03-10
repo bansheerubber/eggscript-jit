@@ -34,7 +34,8 @@ impl EggscriptLowerContext {
 	) -> Result<Vec<Instruction>> {
 		self.common_context.build_value_dependencies(&units);
 		self.common_context
-			.type_check_units(&units, function.as_ref());
+			.type_check_units(&units, function.as_ref())?;
+
 		return self.lower_units(units);
 	}
 
@@ -202,9 +203,19 @@ impl EggscriptLowerContext {
 					instructions.push(Instruction::Push(value.into()));
 				}
 
-				let type_store = self.common_context.type_store.lock().unwrap();
-				let result_ty = type_store.get_type(result.ty()).unwrap();
-				let name = result_ty.get_name().unwrap();
+				let type_store = self
+					.common_context
+					.type_store
+					.lock()
+					.expect("Could not lock type store");
+
+				let result_ty = type_store
+					.get_type(result.ty())
+					.expect("Could not find result type");
+
+				let name = result_ty
+					.get_name()
+					.expect("Could not get result type name");
 
 				// TODO clean up nested bullshit
 				if let Value::Primitive { value, .. } = left.deref() {
@@ -250,8 +261,14 @@ impl EggscriptLowerContext {
 					}
 				}
 
-				let type_store = self.common_context.type_store.lock().unwrap();
-				let function_type = type_store.get_function(name).unwrap();
+				let type_store = self
+					.common_context
+					.type_store
+					.lock()
+					.expect("Could not lock type store");
+				let function_type = type_store
+					.get_function(name)
+					.expect("Could not find function");
 
 				instructions.push(Instruction::CallFunction(*function_handle));
 
@@ -312,9 +329,19 @@ impl EggscriptLowerContext {
 				}
 			}
 			MIRInfo::Unary(result, rvalue, operator) => {
-				let type_store = self.common_context.type_store.lock().unwrap();
-				let result_ty = type_store.get_type(result.ty()).unwrap();
-				let name = result_ty.get_name().unwrap();
+				let type_store = self
+					.common_context
+					.type_store
+					.lock()
+					.expect("Could not lock type store");
+
+				let result_ty = type_store
+					.get_type(result.ty())
+					.expect("Could not find result type");
+
+				let name = result_ty
+					.get_name()
+					.expect("Could not get result type name");
 
 				let right_stack_address = match rvalue.deref() {
 					Value::Location { id, .. } => *self

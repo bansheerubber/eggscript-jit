@@ -15,7 +15,7 @@ impl AstLowerContext {
 		};
 
 		let (mut value_units, value) = self.lower_expression(value)?;
-		let value = value.unwrap();
+		let value = value.expect("Expected value where there is none");
 
 		let result = self.value_store.new_temp(value.ty());
 

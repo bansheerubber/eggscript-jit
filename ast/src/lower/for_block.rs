@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use eggscript_mir::{Transition, UnitHandle, Value};
 use eggscript_types::P;
 
@@ -17,7 +17,10 @@ impl AstLowerContext {
 		let (mut declaration_units, _) = self.lower_expression(declaration)?;
 
 		let (mut conditional_units, conditional_value) = self.lower_expression(conditional)?;
-		let first_conditional_unit = *conditional_units.iter().nth(0).unwrap();
+		let first_conditional_unit = *conditional_units
+			.iter()
+			.nth(0)
+			.expect("Could not get first conditional unit");
 
 		let (mut update_units, _) = self.lower_expression(update)?;
 
@@ -32,7 +35,7 @@ impl AstLowerContext {
 			vec![],
 			Transition::GotoIfFalse(
 				unit_after,
-				conditional_value.context("Could not unwrap conditional units")?,
+				conditional_value.expect("Expected conditional value where there is none"),
 			),
 		));
 

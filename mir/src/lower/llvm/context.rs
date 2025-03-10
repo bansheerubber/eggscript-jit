@@ -50,7 +50,8 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 	) -> Result<FunctionValue<'ctx>> {
 		self.common_context.build_value_dependencies(&units);
 		self.common_context
-			.type_check_units(&units, function.as_ref());
+			.type_check_units(&units, function.as_ref())?;
+
 		return self.lower_units(units, function.as_ref());
 	}
 
@@ -80,10 +81,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		Ok(())
 	}
 
+	// TODO if we fail to optimize the LLVM code, then maybe the machine isn't capable of running
+	// JIT'ed code?
 	pub fn optimize_ir(&mut self) {
 		Target::initialize_all(&InitializationConfig::default());
 		let target_triple = TargetMachine::get_default_triple();
-		let target = Target::from_triple(&target_triple).unwrap();
+		let target = Target::from_triple(&target_triple).expect("Could not find target triple");
 		let target_machine = target
 			.create_target_machine(
 				&target_triple,
@@ -93,7 +96,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				RelocMode::PIC,
 				CodeModel::Default,
 			)
-			.unwrap();
+			.expect("Could not create target machine");
 
 		let passes: &[&str] = &[
 			"instcombine<no-verify-fixpoint>", // combine redundant instructions
@@ -109,11 +112,15 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				&target_machine,
 				PassBuilderOptions::create(),
 			)
-			.unwrap();
+			.expect("Could not run optimization passes");
 	}
 
 	fn type_to_llvm_basic_type(&self, ty: TypeHandle) -> Result<BasicTypeEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
 		let ty = type_store.get_type(
 			type_store
 				.resolve_type(ty)
@@ -162,17 +169,32 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			let unit = &units[i];
 			match &unit.transition {
 				Transition::Goto(other) => {
-					self.builder
-						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
+					self.builder.position_at_end(
+						*self
+							.units_to_blocks
+							.get(&unit.id)
+							.expect("Could not find unit"),
+					);
 
-					self.builder
-						.build_unconditional_branch(*self.units_to_blocks.get(other).unwrap())?;
+					self.builder.build_unconditional_branch(
+						*self
+							.units_to_blocks
+							.get(other)
+							.expect("Could not find target unit"),
+					)?;
 				}
 				Transition::GotoIfFalse(else_unit, value) => {
-					self.builder
-						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
+					self.builder.position_at_end(
+						*self
+							.units_to_blocks
+							.get(&unit.id)
+							.expect("Could not find unit"),
+					);
 
-					let then_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
+					let then_block = self
+						.units_to_blocks
+						.get(&units[i + 1].id)
+						.expect("Could not find 'then' unit");
 
 					let value = self.builder.build_float_compare(
 						FloatPredicate::ONE,
@@ -184,14 +206,24 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder.build_conditional_branch(
 						value,
 						*then_block,
-						*self.units_to_blocks.get(else_unit).unwrap(),
+						*self
+							.units_to_blocks
+							.get(else_unit)
+							.expect("Could not find 'else' unit"),
 					)?;
 				}
 				Transition::GotoIfTrue(then_unit, value) => {
-					self.builder
-						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
+					self.builder.position_at_end(
+						*self
+							.units_to_blocks
+							.get(&unit.id)
+							.expect("Could not find unit"),
+					);
 
-					let else_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
+					let else_block = self
+						.units_to_blocks
+						.get(&units[i + 1].id)
+						.expect("Could not find 'else' unit");
 
 					let value = self.builder.build_float_compare(
 						FloatPredicate::ONE,
@@ -202,21 +234,30 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					self.builder.build_conditional_branch(
 						value,
-						*self.units_to_blocks.get(then_unit).unwrap(),
+						*self
+							.units_to_blocks
+							.get(then_unit)
+							.expect("Could not find 'then' unit"),
 						*else_block,
 					)?;
 				}
 				Transition::Invalid => unreachable!(),
 				Transition::Next => {
-					self.builder
-						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
+					self.builder.position_at_end(
+						*self
+							.units_to_blocks
+							.get(&unit.id)
+							.expect("Could not find unit"),
+					);
 
 					if i + 1 >= units.len() {
 						if let Some(function) = function {
 							// TODO fix type issue
 							self.builder.build_return(Some(
 								&self
-									.type_to_llvm_basic_type(function.return_type.unwrap())?
+									.type_to_llvm_basic_type(function.return_type.expect(
+										"Expected function return type where there is none",
+									))?
 									.const_zero(),
 							))?;
 						}
@@ -225,12 +266,19 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					}
 
 					self.builder.build_unconditional_branch(
-						*self.units_to_blocks.get(&units[i + 1].id).unwrap(),
+						*self
+							.units_to_blocks
+							.get(&units[i + 1].id)
+							.expect("Could not find branch target unit"),
 					)?;
 				}
 				Transition::Return(value) => {
-					self.builder
-						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
+					self.builder.position_at_end(
+						*self
+							.units_to_blocks
+							.get(&unit.id)
+							.expect("Could not find unit"),
+					);
 
 					if let Some(value) = value {
 						// TODO fix type issue
@@ -244,8 +292,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		}
 
 		if function.is_none() {
-			self.builder
-				.position_at_end(*self.units_to_blocks.get(&units.last().unwrap().id).unwrap());
+			self.builder.position_at_end(
+				*self
+					.units_to_blocks
+					.get(&units.last().expect("Could not get last unit").id)
+					.expect("Could not find unit"),
+			);
 
 			self.builder.build_return(None)?;
 		}
@@ -285,7 +337,10 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				PrimitiveValue::Number(value) => Ok(self.context.f64_type().const_float(*value)),
 			},
 			Value::Temp { id, .. } => {
-				let basic_value = self.value_to_basic_value.get(id).unwrap();
+				let basic_value = self
+					.value_to_basic_value
+					.get(id)
+					.expect("Could not find find basic value");
 
 				if basic_value.is_pointer_value() {
 					Ok(self
@@ -304,13 +359,26 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 	}
 
 	pub(crate) fn maybe_deref_llvm_value(&self, value: &P<Value>) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let is_primitive = type_store.get_type(value.ty()).unwrap().is_primitive();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let is_primitive = type_store
+			.get_type(value.ty())
+			.expect("Could not find value type")
+			.is_primitive();
+
 		drop(type_store);
 
 		match value.deref() {
 			Value::Location { id, .. } | Value::Temp { id, .. } => {
-				let basic_value = self.value_to_basic_value.get(id).unwrap();
+				let basic_value = self
+					.value_to_basic_value
+					.get(id)
+					.expect("Could not find basic value");
+
 				if is_primitive && basic_value.is_pointer_value() {
 					return Ok(self
 						.builder
@@ -452,7 +520,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					args.push(self.maybe_deref_llvm_value(argument)?.into());
 				}
 
-				let type_store = self.common_context.type_store.lock().unwrap();
+				let type_store = self.common_context.type_store.lock().expect("Could not lock type store");
 				let function_type = type_store
 					.get_function(name)
 					.context("Could not find function")?;
@@ -470,7 +538,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					self.builder.build_store(
 						self.value_to_llvm_pointer_value(&return_value)?,
-						llvm_return_value.try_as_basic_value().left().unwrap(),
+						llvm_return_value.try_as_basic_value().left().expect("Expected return basic value where there is none")
 					)?;
 				}
 			}
@@ -489,7 +557,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			MIRInfo::StoreValue(lvalue, rvalue) => {
 				self.alloc_llvm_value(lvalue)?;
 
-				let value = self.value_to_basic_value.get(&rvalue.id()).unwrap();
+				let value = self.value_to_basic_value.get(&rvalue.id()).expect("Could not find basic value");
 				let value = if value.is_pointer_value() {
 					self.builder.build_load(
 						self.type_to_llvm_basic_type(rvalue.ty())?,

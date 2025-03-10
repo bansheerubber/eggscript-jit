@@ -20,7 +20,7 @@ pub fn llvm_to_vector_string(function: &FunctionValue<'_>) -> Vec<String> {
 	let string = function.print_to_string().to_string_lossy().to_string();
 	result.extend(string.split("\n").map(str::to_string));
 
-	if result.last().unwrap().len() == 0 {
+	if result.last().expect("Could not get last in vector").len() == 0 {
 		result.pop();
 	}
 
@@ -35,7 +35,7 @@ pub fn mir_to_vector_string(units: &Vec<Unit>) -> Vec<String> {
 		result.extend(block.split("\n").map(str::to_string));
 	}
 
-	if result.last().unwrap().len() == 0 {
+	if result.last().expect("Could not get last in vector").len() == 0 {
 		result.pop();
 	}
 
@@ -53,7 +53,11 @@ pub fn lower_function<'a, 'ctx>(
 	let (ast_context, units) = compile_function(
 		function.clone(),
 		program,
-		function.scope.as_ref().unwrap().clone(),
+		function
+			.scope
+			.as_ref()
+			.expect("Expected scope where there was none")
+			.clone(),
 	)?;
 
 	if debug {
@@ -131,14 +135,17 @@ pub fn compile_llvm_program(contents: &str, file_name: &str) -> Result<LLVMCompi
 				false,
 			)?;
 
-			let type_store = program.type_store.lock().unwrap();
+			let type_store = program
+				.type_store
+				.lock()
+				.expect("Could not lock type store");
 
 			let return_ty = if let Some(return_ty) = function.return_ty {
 				type_store
 					.get_type(return_ty)
-					.unwrap()
+					.expect("Could not get argument type")
 					.get_name()
-					.unwrap()
+					.expect("Could not get type name")
 					.to_string()
 			} else {
 				"void".to_string()
@@ -150,10 +157,10 @@ pub fn compile_llvm_program(contents: &str, file_name: &str) -> Result<LLVMCompi
 					.iter()
 					.map(|argument| {
 						let type_name = type_store
-							.get_type(argument.ty.unwrap())
-							.unwrap()
+							.get_type(argument.ty)
+							.expect("Could not get argument type")
 							.get_name()
-							.unwrap();
+							.expect("Could not get type name");
 
 						return (argument.name.clone(), type_name.to_string());
 					})
@@ -215,7 +222,7 @@ pub fn run_llvm_program(contents: &str, file_name: &str, debug: bool) -> Result<
 
 	let engine = module
 		.create_jit_execution_engine(OptimizationLevel::Default)
-		.unwrap();
+		.expect("Could not create JIT execution engine");
 
 	let function_mapping = get_native_function_mapping_for_jit();
 
@@ -235,10 +242,15 @@ pub fn run_llvm_program(contents: &str, file_name: &str, debug: bool) -> Result<
 				println!("{}", function.print_to_string().to_string_lossy());
 			}
 		} else {
-			let function_declaration = module.get_function(&function.name).unwrap();
+			let function_declaration = module
+				.get_function(&function.name)
+				.expect("Could not find function in module");
+
 			engine.add_global_mapping(
 				&function_declaration,
-				*function_mapping.get(&function.name).unwrap(),
+				*function_mapping
+					.get(&function.name)
+					.expect("Could not get native function from map"),
 			);
 		}
 	}

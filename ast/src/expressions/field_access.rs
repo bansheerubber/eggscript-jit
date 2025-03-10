@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use eggscript_types::P;
 use pest::iterators::Pair;
 
@@ -18,9 +18,9 @@ impl Expression {
 		let type_handle = context
 			.type_store
 			.lock()
-			.unwrap()
+			.expect("Could not lock type store")
 			.name_to_type_handle("number")
-			.context("Could not get 'number' literal type")?;
+			.expect("Could not get 'number' literal type");
 
 		let variable_ident = Ident::new(&symbol, span);
 

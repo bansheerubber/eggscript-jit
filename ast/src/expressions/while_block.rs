@@ -16,22 +16,18 @@ impl Expression {
 		let span = pair.as_span().into();
 		let mut pairs = pair.into_inner();
 
-		let conditional = Expression::parse_pair(context, pairs.next().unwrap())
-			.context("Could not parse pair")??;
+		let conditional =
+			Expression::parse_pair(context, pairs.next().expect("Could not get next pair"))
+				.context("Could not parse pair")??;
 
 		let block = pairs.next().context("Could not get next pair")?;
 
 		let expressions = block
 			.into_inner()
 			.map(|p| {
-				Expression::parse_pair(context, p)
-					.context("Could not parse pair")
-					.unwrap()
-					.unwrap()
+				Expression::parse_pair(context, p).expect("Expected expression where there is none")
 			})
-			.collect::<Vec<P<Expression>>>()
-			.try_into()
-			.unwrap();
+			.collect::<Result<Vec<P<Expression>>>>()?;
 
 		let block = P::new(Block { expressions, span });
 

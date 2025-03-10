@@ -60,10 +60,10 @@ impl Program {
 	) {
 		let argument_types = arguments
 			.iter()
-			.map(|argument| argument.ty.unwrap())
+			.map(|argument| argument.ty)
 			.collect::<Vec<TypeHandle>>();
 
-		let ty = self.type_store.lock().unwrap().create_function_type(
+		let ty = self.type_store.lock().expect("Could not lock type store").create_function_type(
 			name,
 			argument_types,
 			Some(return_type),

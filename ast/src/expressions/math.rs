@@ -38,7 +38,14 @@ impl Expression {
 				let ty = if lhs.ty == rhs.ty {
 					lhs.ty
 				} else {
-					Some(context.borrow().type_store.lock().unwrap().create_unknown())
+					Some(
+						context
+							.borrow()
+							.type_store
+							.lock()
+							.expect("Could not lock type store")
+							.create_unknown(),
+					)
 				};
 
 				Ok(P::new(Expression {

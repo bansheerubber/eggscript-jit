@@ -19,7 +19,10 @@ impl Expression {
 			.as_str();
 		symbol = symbol.trim();
 
-		let type_store = context.type_store.lock().unwrap();
+		let type_store = context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
 
 		let ty = if let Rule::type_ident = inner
 			.peek()
@@ -51,7 +54,13 @@ impl Expression {
 		{
 			Some(expression_ty)
 		} else if let None = ty {
-			Some(context.type_store.lock().unwrap().create_unknown())
+			Some(
+				context
+					.type_store
+					.lock()
+					.expect("Could not lock type store")
+					.create_unknown(),
+			)
 		} else {
 			ty
 		};

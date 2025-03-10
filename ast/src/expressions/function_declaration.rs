@@ -12,7 +12,7 @@ pub struct FunctionArgument {
 	pub name: String,
 	#[allow(dead_code)]
 	pub span: Span,
-	pub ty: Option<TypeHandle>,
+	pub ty: TypeHandle,
 }
 
 #[derive(Debug)]
@@ -103,20 +103,21 @@ impl Expression {
 
 			let name = function_arg_inner
 				.next()
-				.context("Could not unwrap function arg name")?
+				.expect("Could not get function arg name")
 				.as_str()
 				.to_string();
 
 			let type_name = function_arg_inner
 				.next()
-				.context("Could not unwrap function arg type")?
+				.expect("Could not get function arg type")
 				.as_str();
 
 			let ty = context
 				.type_store
 				.lock()
-				.unwrap()
-				.name_to_type_handle(type_name);
+				.expect("Could not lock type store")
+				.name_to_type_handle(type_name)
+				.expect("Could not find argument type");
 
 			arguments.push(FunctionArgument { name, span, ty });
 		}
@@ -136,7 +137,7 @@ impl Expression {
 				context
 					.type_store
 					.lock()
-					.unwrap()
+					.expect("Could not lock type store")
 					.name_to_type_handle(return_type)
 					.context("Could not find return type")?,
 			)
@@ -150,20 +151,22 @@ impl Expression {
 		let expressions = block
 			.into_inner()
 			.map(|p| {
-				Expression::parse_pair(context, p)
-					.context("Could not parse pair")
-					.unwrap()
+				Expression::parse_pair(context, p).expect("Expected expression where there is none")
 			})
 			.collect::<Vec<Result<P<Expression>>>>();
 
-		let function_ty = context.type_store.lock().unwrap().create_function_type(
-			name,
-			arguments
-				.iter()
-				.map(|argument| argument.ty.unwrap())
-				.collect::<Vec<TypeHandle>>(),
-			return_type,
-		);
+		let function_ty = context
+			.type_store
+			.lock()
+			.expect("Could not lock type store")
+			.create_function_type(
+				name,
+				arguments
+					.iter()
+					.map(|argument| argument.ty)
+					.collect::<Vec<TypeHandle>>(),
+				return_type,
+			);
 
 		Ok(P::new(Function {
 			arguments,

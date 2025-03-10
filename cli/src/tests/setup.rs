@@ -26,7 +26,7 @@ pub fn assert_buffer(expected: Vec<&str>, message: &str) {
 	);
 }
 
-pub fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Result<()> {	
+pub fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Result<()> {
 	let program = parse_string(contents, file_name)?;
 	let (ast_content, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
@@ -50,7 +50,10 @@ pub fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -
 			interpreter.add_function(eggscript_interpreter::Function::new_native(
 				function.id,
 				function.arguments.len(),
-				native_function_mapping.get(&function.name).unwrap().clone(),
+				native_function_mapping
+					.get(&function.name)
+					.expect("Could not get native function from map")
+					.clone(),
 				&function.name,
 			));
 		}
@@ -82,7 +85,7 @@ pub fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
 
 	let engine = module
 		.create_jit_execution_engine(OptimizationLevel::Default)
-		.unwrap();
+		.expect("Could not create JIT execution engine");
 
 	let function_mapping = get_test_native_function_mapping_for_jit();
 
@@ -97,10 +100,15 @@ pub fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
 				false,
 			)?;
 		} else {
-			let function_declaration = module.get_function(&function.name).unwrap();
+			let function_declaration = module
+				.get_function(&function.name)
+				.expect("Could not find function in module");
+
 			engine.add_global_mapping(
 				&function_declaration,
-				*function_mapping.get(&function.name).unwrap(),
+				*function_mapping
+					.get(&function.name)
+					.expect("Could not get native function from map"),
 			);
 		}
 	}
@@ -114,4 +122,3 @@ pub fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
 
 	Ok(())
 }
-

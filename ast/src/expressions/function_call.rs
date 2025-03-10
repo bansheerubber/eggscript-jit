@@ -32,7 +32,7 @@ impl Expression {
 		let ty = context
 			.type_store
 			.lock()
-			.unwrap()
+			.expect("Could not lock type store")
 			.create_type(Type::FunctionReturn {
 				id: 0,
 				function_name: name.into(),

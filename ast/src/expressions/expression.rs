@@ -82,8 +82,11 @@ impl Expression {
 			type_store,
 		};
 
-		let type_store = context.type_store.lock().unwrap();
-		let number = type_store.name_to_type_handle("number");
+		let type_store = context.type_store.lock().expect("Could not lock type store");
+		let number = type_store
+			.name_to_type_handle("number")
+			.context("Could not get 'number' type")?;
+
 		drop(type_store);
 
 		program.add_native_function(
@@ -93,7 +96,7 @@ impl Expression {
 				ty: number,
 			}],
 			"printNumber",
-			number.unwrap(),
+			number,
 		);
 
 		Ok(program)

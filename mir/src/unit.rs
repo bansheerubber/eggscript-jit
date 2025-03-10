@@ -130,17 +130,31 @@ impl UnitStore {
 		}
 
 		for span in spans_to_combine.iter() {
-			let parent_unit = span.iter().nth(0).unwrap();
+			let parent_unit = span
+				.iter()
+				.nth(0)
+				.expect("Could not get first unit in span");
 			for unit_handle in span.iter().skip(1) {
-				let other = self.unit_id_to_unit.remove(&unit_handle).unwrap();
-				let main = self.unit_id_to_unit.get_mut(&parent_unit).unwrap();
+				let other = self
+					.unit_id_to_unit
+					.remove(&unit_handle)
+					.expect("Could not remove unit");
+				let main = self
+					.unit_id_to_unit
+					.get_mut(&parent_unit)
+					.expect("Could not mutate parent unit");
 				main.combine(other);
 			}
 		}
 
 		for span in spans_to_combine.iter().rev() {
 			for unit_handle in span.iter().skip(1) {
-				units.remove(units.iter().position(|unit| unit == unit_handle).unwrap());
+				units.remove(
+					units
+						.iter()
+						.position(|unit| unit == unit_handle)
+						.expect("Could not find unit in list"),
+				);
 			}
 		}
 
@@ -158,7 +172,11 @@ impl UnitStore {
 
 		units
 			.iter()
-			.map(|unit_id| self.unit_id_to_unit.remove(unit_id).unwrap())
+			.map(|unit_id| {
+				self.unit_id_to_unit
+					.remove(unit_id)
+					.expect("Could not find unit")
+			})
 			.collect::<Vec<Unit>>()
 	}
 }

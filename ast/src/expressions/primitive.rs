@@ -14,7 +14,7 @@ impl Expression {
 		let type_handle = context
 			.type_store
 			.lock()
-			.unwrap()
+			.expect("Could not lock type store")
 			.name_to_type_handle("number")
 			.context("Could not get 'number' literal type")?;
 

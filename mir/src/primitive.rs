@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use eggscript_types::{TypeHandle, TypeStore};
 
 #[derive(Clone, Debug)]
@@ -22,9 +23,11 @@ impl std::fmt::Display for PrimitiveValue {
 }
 
 impl PrimitiveValue {
-	pub fn get_type_from_type_store(&self, type_store: &TypeStore) -> TypeHandle {
+	pub fn get_type_from_type_store(&self, type_store: &TypeStore) -> Result<TypeHandle> {
 		match self {
-			PrimitiveValue::Number(_) => type_store.name_to_type_handle("number").unwrap(),
+			PrimitiveValue::Number(_) => type_store
+				.name_to_type_handle("number")
+				.context("Could not get 'number' type"),
 		}
 	}
 }

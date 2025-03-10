@@ -90,7 +90,7 @@ pub fn compile_function(
 	for argument in function.arguments.iter() {
 		let (value, _) = lower_context
 			.value_store
-			.new_location(&argument.name, argument.ty.unwrap());
+			.new_location(&argument.name, argument.ty);
 
 		mir.push(MIR::new(
 			MIRInfo::Allocate(value, Some(index)),

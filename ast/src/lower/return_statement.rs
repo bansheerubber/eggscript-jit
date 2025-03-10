@@ -21,16 +21,27 @@ impl AstLowerContext {
 			let (mut value_units, value) = self.lower_expression(value)?;
 			units.append(&mut value_units);
 
-			match value.as_ref().unwrap().deref() {
+			match value
+				.as_ref()
+				.expect("Expected return value where there is none")
+				.deref()
+			{
 				Value::Location { ty, .. } => {
 					let temp_value = self.value_store.new_temp(*ty);
-					units.push(self.unit_store.new_unit(
-						vec![MIR::new(
-							MIRInfo::StoreValue(temp_value.clone(), value.clone().unwrap()),
-							expression.span,
-						)],
-						Transition::Next,
-					));
+					units.push(
+						self.unit_store.new_unit(
+							vec![MIR::new(
+								MIRInfo::StoreValue(
+									temp_value.clone(),
+									value
+										.clone()
+										.expect("Expected return value where there is none"),
+								),
+								expression.span,
+							)],
+							Transition::Next,
+						),
+					);
 
 					Some(temp_value)
 				}

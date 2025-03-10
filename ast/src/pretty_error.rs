@@ -42,7 +42,9 @@ pub fn print_line_with_squiggle(
 		),
 	};
 
-	let (line, tab_offset) = reformat_line(lines.get(&start_line).unwrap());
+	let (line, tab_offset) =
+		reformat_line(lines.get(&start_line).expect("Could not get start line"));
+
 	start_pos += tab_offset;
 	end_pos += tab_offset;
 

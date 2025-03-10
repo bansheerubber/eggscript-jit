@@ -16,7 +16,7 @@ impl AstLowerContext {
 
 		let value = match ty {
 			eggscript_types::Primitive::Number => self.value_store.new_primitive(
-				expression.ty.context("Could not unwrap type")?,
+				expression.ty.expect("Could not get type"),
 				PrimitiveValue::Number(
 					value
 						.trim()

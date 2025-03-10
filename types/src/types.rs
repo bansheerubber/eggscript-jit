@@ -165,10 +165,10 @@ impl TypeStore {
 	}
 
 	pub fn resolve_type(&self, ty: TypeHandle) -> Option<TypeHandle> {
-		let ty = self.types.get(ty).unwrap();
+		let ty = self.types.get(ty)?;
 		match ty {
 			Type::FunctionReturn { function_name, .. } => {
-				let function = self.functions.get(function_name).unwrap();
+				let function = self.functions.get(function_name).expect("Could not get function");
 				function.return_type
 			}
 			Type::Known { id, .. } => Some(*id),

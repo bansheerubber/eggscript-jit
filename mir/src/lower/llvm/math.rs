@@ -52,8 +52,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		left_operand: &P<Value>,
 		right_operand: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -79,8 +87,15 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		left_operand: &P<Value>,
 		right_operand: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -106,8 +121,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		left_operand: &P<Value>,
 		right_operand: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -133,8 +156,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		left_operand: &P<Value>,
 		right_operand: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -160,8 +191,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		left_operand: &P<Value>,
 		right_operand: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -188,8 +227,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		right_operand: &P<Value>,
 		op: &BinaryOperator,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -219,8 +266,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		lvalue: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -246,8 +301,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		lvalue: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -273,8 +336,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		lvalue: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -300,8 +371,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		lvalue: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -329,8 +408,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		lvalue: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -357,8 +444,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		result_value: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -383,8 +478,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		result_value: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
@@ -408,8 +511,16 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		result_value: &P<Value>,
 		rvalue: &P<Value>,
 	) -> Result<BasicValueEnum<'ctx>> {
-		let type_store = self.common_context.type_store.lock().unwrap();
-		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let type_store = self
+			.common_context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
+		let result_type = type_store
+			.get_type(result_value.ty())
+			.expect("Could not find result type");
+
 		let Some(info) = result_type.get_info() else {
 			unreachable!();
 		};
