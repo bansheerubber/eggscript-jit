@@ -1,0 +1,30 @@
+function and(%a: number, %b: number): number {
+	return %a & %b;
+}
+
+function or(%a: number, %b: number): number {
+	return %a | %b;
+}
+
+function xor(%a: number, %b: number): number {
+	return %a ^ %b;
+}
+
+function shiftLeft(%a: number, %b: number): number {
+	return %a << %b;
+}
+
+function shiftRight(%a: number, %b: number): number {
+	return %a >> %b;
+}
+
+function not(%a: number): number {
+	return ~%a;
+}
+
+printNumber(and(10, 3));
+printNumber(or(10, 3));
+printNumber(xor(10, 3));
+printNumber(shiftLeft(10, 3));
+printNumber(shiftRight(10, 3));
+printNumber(not(5));
