@@ -24,7 +24,6 @@ impl AstLowerContext {
 						.context(format!("Could not parse f64 '{}'", value))?,
 				),
 			),
-			eggscript_types::Primitive::String => todo!(),
 			_ => todo!(),
 		};
 

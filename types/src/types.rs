@@ -4,9 +4,7 @@ use crate::FunctionType;
 
 #[derive(Clone, Debug)]
 pub enum Primitive {
-	Char,
 	Number,
-	String,
 	Null,
 }
 

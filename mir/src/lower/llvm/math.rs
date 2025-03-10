@@ -60,7 +60,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => Ok(self
 					.builder
 					.build_float_add(
@@ -69,7 +68,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						&format!("add_result{}_", result_value.id()),
 					)?
 					.into()),
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -89,7 +87,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => Ok(self
 					.builder
 					.build_float_sub(
@@ -98,7 +95,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						&format!("sub_result{}_", result_value.id()),
 					)?
 					.into()),
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -118,7 +114,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => Ok(self
 					.builder
 					.build_float_mul(
@@ -127,7 +122,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						&format!("mul_result{}_", result_value.id()),
 					)?
 					.into()),
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -147,7 +141,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => Ok(self
 					.builder
 					.build_float_div(
@@ -156,7 +149,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						&format!("div_result{}_", result_value.id()),
 					)?
 					.into()),
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -176,7 +168,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => Ok(self
 					.builder
 					.build_float_rem(
@@ -185,7 +176,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						&format!("mod_result{}_", result_value.id()),
 					)?
 					.into()),
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -206,14 +196,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		let result = match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => self.builder.build_float_compare(
 					self.binary_operator_to_float_cmp(op),
 					self.value_to_llvm_float_value(left_operand)?,
 					self.value_to_llvm_float_value(right_operand)?,
 					&format!("cmp_result{}_", result_value.id()),
 				)?,
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		};
@@ -239,7 +227,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => {
 					let lvalue = self.build_double_to_int_cast(lvalue)?;
 					let rvalue = self.build_double_to_int_cast(rvalue)?;
@@ -248,7 +235,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					Ok(self.build_int_to_double_cast(result)?.into())
 				}
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -268,7 +254,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => {
 					let lvalue = self.build_double_to_int_cast(lvalue)?;
 					let rvalue = self.build_double_to_int_cast(rvalue)?;
@@ -277,7 +262,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					Ok(self.build_int_to_double_cast(result)?.into())
 				}
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -297,7 +281,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => {
 					let lvalue = self.build_double_to_int_cast(lvalue)?;
 					let rvalue = self.build_double_to_int_cast(rvalue)?;
@@ -306,7 +289,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					Ok(self.build_int_to_double_cast(result)?.into())
 				}
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -326,7 +308,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => {
 					let lvalue = self.build_double_to_int_cast(lvalue)?;
 					let rvalue = self.build_double_to_int_cast(rvalue)?;
@@ -337,7 +318,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					Ok(self.build_int_to_double_cast(result)?.into())
 				}
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -357,7 +337,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => {
 					let lvalue = self.build_double_to_int_cast(lvalue)?;
 					let rvalue = self.build_double_to_int_cast(rvalue)?;
@@ -368,7 +347,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					Ok(self.build_int_to_double_cast(result)?.into())
 				}
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -387,7 +365,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => {
 					let not_result = self.builder.build_not(
 						self.build_double_to_int_cast(rvalue)?,
@@ -396,7 +373,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					Ok(self.build_int_to_double_cast(not_result)?.into())
 				}
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -415,7 +391,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => Ok(self
 					.builder
 					.build_float_neg(
@@ -423,7 +398,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						&format!("neg_result{}_", result_value.id()),
 					)?
 					.into()),
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		}
@@ -442,14 +416,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 		let result = match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
-				Primitive::Char => todo!(),
 				Primitive::Number => self.builder.build_float_compare(
 					FloatPredicate::OEQ,
 					self.context.f64_type().const_zero(),
 					self.value_to_llvm_float_value(rvalue)?,
 					&format!("not_result{}_", result_value.id()),
 				)?,
-				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},
 		};

@@ -112,7 +112,6 @@ impl Expression {
 			Rule::if_block => Some(Expression::parse_if_block(context, pair)),
 			Rule::math => Some(Expression::parse_math(context, pair)),
 			Rule::return_statement => Some(Expression::parse_return_statement(context, pair)),
-			Rule::string_literal => Some(Expression::parse_string_literal(context, pair)),
 			Rule::variable_assignment => Some(Expression::parse_variable_assignment(context, pair)),
 			Rule::variable_declaration => {
 				Some(Expression::parse_variable_declaration(context, pair))

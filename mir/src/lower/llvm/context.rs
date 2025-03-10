@@ -125,8 +125,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			Some(Type::Known { info, .. }) => match info {
 				KnownTypeInfo::Primitive(primitive) => match primitive {
 					Primitive::Number => Ok(self.context.f64_type().into()),
-					Primitive::Char => Ok(self.context.i8_type().into()),
-					Primitive::String => todo!(),
 					Primitive::Null => todo!(),
 				},
 			},
@@ -285,7 +283,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				.into_float_value()),
 			Value::Primitive { value, .. } => match value {
 				PrimitiveValue::Number(value) => Ok(self.context.f64_type().const_float(*value)),
-				PrimitiveValue::String(_) => unreachable!(),
 			},
 			Value::Temp { id, .. } => {
 				let basic_value = self.value_to_basic_value.get(id).unwrap();
@@ -331,7 +328,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				PrimitiveValue::Number(value) => {
 					Ok(self.context.f64_type().const_float(*value).into())
 				}
-				PrimitiveValue::String(_) => unreachable!(),
 			},
 		}
 	}
@@ -488,7 +484,6 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 							self.context.f64_type().const_float(*number),
 						)?;
 					}
-					PrimitiveValue::String(_) => todo!(),
 				}
 			}
 			MIRInfo::StoreValue(lvalue, rvalue) => {
