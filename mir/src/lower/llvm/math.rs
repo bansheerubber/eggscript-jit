@@ -1,24 +1,15 @@
 use anyhow::Result;
 use eggscript_types::{KnownTypeInfo, Primitive, P};
-use inkwell::{values::BasicValueEnum, FloatPredicate, IntPredicate};
+use inkwell::{
+	values::{BasicValueEnum, FloatValue, InstructionOpcode, IntValue},
+	FloatPredicate,
+};
 
 use crate::{BinaryOperator, Value};
 
 use super::LlvmLowerContext;
 
 impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
-	fn binary_operator_to_int_cmp(&self, operator: &BinaryOperator) -> IntPredicate {
-		match operator {
-			BinaryOperator::Equal => IntPredicate::EQ,
-			BinaryOperator::NotEqual => IntPredicate::NE,
-			BinaryOperator::LessThan => IntPredicate::SLT,
-			BinaryOperator::GreaterThan => IntPredicate::SGT,
-			BinaryOperator::LessThanEqualTo => IntPredicate::SLE,
-			BinaryOperator::GreaterThanEqualTo => IntPredicate::SGE,
-			_ => unreachable!(),
-		}
-	}
-
 	fn binary_operator_to_float_cmp(&self, operator: &BinaryOperator) -> FloatPredicate {
 		match operator {
 			BinaryOperator::Equal => FloatPredicate::OEQ,
@@ -29,6 +20,30 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			BinaryOperator::GreaterThanEqualTo => FloatPredicate::OGE,
 			_ => unreachable!(),
 		}
+	}
+
+	pub fn build_double_to_int_cast(&self, value: &P<Value>) -> Result<IntValue<'ctx>> {
+		Ok(self
+			.builder
+			.build_cast(
+				InstructionOpcode::FPToSI,
+				self.value_to_llvm_float_value(value)?,
+				self.context.i64_type(),
+				"fptosi_cast_",
+			)?
+			.into_int_value())
+	}
+
+	pub fn build_int_to_double_cast(&self, value: IntValue<'ctx>) -> Result<FloatValue<'ctx>> {
+		Ok(self
+			.builder
+			.build_cast(
+				InstructionOpcode::SIToFP,
+				value,
+				self.context.f64_type(),
+				"sitofp_cast_",
+			)?
+			.into_float_value())
 	}
 
 	pub fn build_add(
@@ -209,6 +224,155 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			.into());
 	}
 
+	pub fn build_bitwise_and(
+		&mut self,
+		result_value: &P<Value>,
+		lvalue: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
+		match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Number => {
+					let lvalue = self.build_double_to_int_cast(lvalue)?;
+					let rvalue = self.build_double_to_int_cast(rvalue)?;
+
+					let result = self.builder.build_and(lvalue, rvalue, "bitwise_and_")?;
+
+					Ok(self.build_int_to_double_cast(result)?.into())
+				}
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		}
+	}
+
+	pub fn build_bitwise_or(
+		&mut self,
+		result_value: &P<Value>,
+		lvalue: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
+		match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Number => {
+					let lvalue = self.build_double_to_int_cast(lvalue)?;
+					let rvalue = self.build_double_to_int_cast(rvalue)?;
+
+					let result = self.builder.build_or(lvalue, rvalue, "bitwise_or_")?;
+
+					Ok(self.build_int_to_double_cast(result)?.into())
+				}
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		}
+	}
+
+	pub fn build_bitwise_xor(
+		&mut self,
+		result_value: &P<Value>,
+		lvalue: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
+		match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Number => {
+					let lvalue = self.build_double_to_int_cast(lvalue)?;
+					let rvalue = self.build_double_to_int_cast(rvalue)?;
+
+					let result = self.builder.build_xor(lvalue, rvalue, "bitwise_xor_")?;
+
+					Ok(self.build_int_to_double_cast(result)?.into())
+				}
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		}
+	}
+
+	pub fn build_shift_left(
+		&mut self,
+		result_value: &P<Value>,
+		lvalue: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
+		match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Number => {
+					let lvalue = self.build_double_to_int_cast(lvalue)?;
+					let rvalue = self.build_double_to_int_cast(rvalue)?;
+
+					let result = self
+						.builder
+						.build_left_shift(lvalue, rvalue, "shift_left")?;
+
+					Ok(self.build_int_to_double_cast(result)?.into())
+				}
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		}
+	}
+
+	pub fn build_shift_right(
+		&mut self,
+		result_value: &P<Value>,
+		lvalue: &P<Value>,
+		rvalue: &P<Value>,
+	) -> Result<BasicValueEnum<'ctx>> {
+		let type_store = self.common_context.type_store.lock().unwrap();
+		let result_type = type_store.get_type(result_value.ty()).unwrap();
+		let Some(info) = result_type.get_info() else {
+			unreachable!();
+		};
+
+		match info {
+			KnownTypeInfo::Primitive(primitive) => match primitive {
+				Primitive::Char => todo!(),
+				Primitive::Number => {
+					let lvalue = self.build_double_to_int_cast(lvalue)?;
+					let rvalue = self.build_double_to_int_cast(rvalue)?;
+
+					let result =
+						self.builder
+							.build_right_shift(lvalue, rvalue, false, "shift_right")?;
+
+					Ok(self.build_int_to_double_cast(result)?.into())
+				}
+				Primitive::String => todo!(),
+				Primitive::Null => todo!(),
+			},
+		}
+	}
+
 	pub fn build_bitwise_not(
 		&mut self,
 		result_value: &P<Value>,
@@ -223,7 +387,14 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		match info {
 			KnownTypeInfo::Primitive(primitive) => match primitive {
 				Primitive::Char => todo!(),
-				Primitive::Number => todo!(),
+				Primitive::Number => {
+					let not_result = self.builder.build_not(
+						self.build_double_to_int_cast(rvalue)?,
+						&format!("not_result{}_", result_value.id()),
+					)?;
+
+					Ok(self.build_int_to_double_cast(not_result)?.into())
+				}
 				Primitive::String => todo!(),
 				Primitive::Null => todo!(),
 			},

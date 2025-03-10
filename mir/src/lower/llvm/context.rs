@@ -393,6 +393,36 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 						let result = self.build_rem(result_value, left_operand, right_operand)?;
 						self.value_to_basic_value.insert(result_value.id(), result);
 					}
+					BinaryOperator::BitwiseAnd => {
+						let result =
+							self.build_bitwise_and(result_value, left_operand, right_operand)?;
+
+						self.value_to_basic_value.insert(result_value.id(), result);
+					}
+					BinaryOperator::BitwiseOr => {
+						let result =
+							self.build_bitwise_or(result_value, left_operand, right_operand)?;
+
+						self.value_to_basic_value.insert(result_value.id(), result);
+					}
+					BinaryOperator::BitwiseXor => {
+						let result =
+							self.build_bitwise_xor(result_value, left_operand, right_operand)?;
+						
+						self.value_to_basic_value.insert(result_value.id(), result);
+					}
+					BinaryOperator::ShiftLeft => {
+						let result =
+							self.build_shift_left(result_value, left_operand, right_operand)?;
+
+						self.value_to_basic_value.insert(result_value.id(), result);
+					}
+					BinaryOperator::ShiftRight => {
+						let result =
+							self.build_shift_right(result_value, left_operand, right_operand)?;
+
+						self.value_to_basic_value.insert(result_value.id(), result);
+					}
 					BinaryOperator::Equal
 					| BinaryOperator::NotEqual
 					| BinaryOperator::LessThan
@@ -403,7 +433,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 							self.build_cmp(result_value, left_operand, right_operand, operator)?;
 						self.value_to_basic_value.insert(result_value.id(), result);
 					}
-					_ => todo!(),
+					BinaryOperator::LogicalAnd | BinaryOperator::LogicalOr => unreachable!(),
 				}
 			}
 			MIRInfo::CallFunction(name, _, arguments, return_value) => {
