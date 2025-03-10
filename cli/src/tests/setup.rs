@@ -9,12 +9,11 @@ use eggscript_mir::EggscriptLowerContext;
 use inkwell::context::Context;
 use inkwell::execution_engine::JitFunction;
 use inkwell::OptimizationLevel;
-use serial_test::serial;
 
 use crate::eggscript;
 use crate::llvm;
 
-fn assert_buffer(expected: Vec<&str>, message: &str) {
+pub fn assert_buffer(expected: Vec<&str>, message: &str) {
 	let buffer = get_test_print_buffer();
 	clear_test_print_buffer();
 
@@ -27,7 +26,7 @@ fn assert_buffer(expected: Vec<&str>, message: &str) {
 	);
 }
 
-fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Result<()> {
+pub fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Result<()> {	
 	let program = parse_string(contents, file_name)?;
 	let (ast_content, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
@@ -64,7 +63,7 @@ fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -> Re
 
 type EntryFunction = unsafe extern "C" fn() -> ();
 
-fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
+pub fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
 	let program = parse_string(contents, file_name)?;
 
 	let (ast_context, units) = compile_expression(program.clone(), program.global_scope.clone())?;
@@ -116,77 +115,3 @@ fn run_file_in_jit(contents: &str, file_name: &str) -> Result<()> {
 	Ok(())
 }
 
-#[test]
-#[serial]
-fn recursion1() -> Result<()> {
-	let file_contents = include_str!("./test_cases/recursion1.egg");
-	let file_name = "./test_cases/recursion1.egg";
-
-	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["6765"], "interpreter");
-
-	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["6765"], "jit");
-
-	Ok(())
-}
-
-#[test]
-#[serial]
-fn for_loop1() -> Result<()> {
-	let file_contents = include_str!("./test_cases/for_loop1.egg");
-	let file_name = "./test_cases/for_loop1.egg";
-
-	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["1024"], "interpreter");
-
-	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["1024"], "jit");
-
-	Ok(())
-}
-
-#[test]
-#[serial]
-fn math1() -> Result<()> {
-	let file_contents = include_str!("./test_cases/math1.egg");
-	let file_name = "./test_cases/math1.egg";
-
-	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["50159"], "interpreter");
-
-	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["50159"], "jit");
-
-	Ok(())
-}
-
-#[test]
-#[serial]
-fn math2() -> Result<()> {
-	let file_contents = include_str!("./test_cases/math2.egg");
-	let file_name = "./test_cases/math2.egg";
-
-	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["6", "-3.5", "-3.5", "18.7", "-15", "-10"], "interpreter");
-
-	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["6", "-3.5", "-3.5", "18.7", "-15", "-10"], "jit");
-
-	Ok(())
-}
-
-#[test]
-#[serial]
-fn math3() -> Result<()> {
-	let file_contents = include_str!("./test_cases/math3.egg");
-	let file_name = "./test_cases/math3.egg";
-
-	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["2", "11", "9", "80", "1", "-6"], "interpreter");
-
-	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["2", "11", "9", "80", "1", "-6"], "jit");
-
-	Ok(())
-}
