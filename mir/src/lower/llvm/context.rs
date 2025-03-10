@@ -167,9 +167,9 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					let then_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
 					let value = self.builder.build_float_compare(
-						FloatPredicate::OEQ,
+						FloatPredicate::ONE,
 						self.value_to_llvm_float_value(value)?,
-						self.context.f64_type().const_float(1.0),
+						self.context.f64_type().const_float(0.0),
 						"cast_",
 					)?;
 
@@ -186,9 +186,9 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					let else_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
 					let value = self.builder.build_float_compare(
-						FloatPredicate::OEQ,
+						FloatPredicate::ONE,
 						self.value_to_llvm_float_value(value)?,
-						self.context.f64_type().const_float(1.0),
+						self.context.f64_type().const_float(0.0),
 						"cast_",
 					)?;
 
