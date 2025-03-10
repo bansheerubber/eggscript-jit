@@ -116,8 +116,10 @@ impl EggscriptLowerContext {
 						.get(id)
 						.context("Could not get left value stack index")?
 						as RelativeStackAddress,
-
-					Value::Primitive { .. } => -1,
+					Value::Primitive { value, .. } => {
+						instructions.push(Instruction::Push(value.into()));
+						-1
+					}
 					Value::Temp { .. } => -1,
 				};
 
@@ -133,7 +135,10 @@ impl EggscriptLowerContext {
 						.context("Could not get left value stack index")?
 						as RelativeStackAddress,
 
-					Value::Primitive { .. } => -1,
+					Value::Primitive { value, .. } => {
+						instructions.push(Instruction::Push(value.into()));
+						-1
+					}
 					Value::Temp { .. } => -1,
 				};
 

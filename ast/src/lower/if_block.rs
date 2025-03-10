@@ -81,9 +81,7 @@ impl AstLowerContext {
 		let (mut block_units, _) = self.lower_block(code).context("Could not lower block")?;
 
 		let mut units = vec![];
-		if conditional_units.len() > 0 {
-			units.append(&mut conditional_units);
-		}
+		units.append(&mut conditional_units);
 
 		let jump_unit = self.unit_store.new_unit(
 			vec![],

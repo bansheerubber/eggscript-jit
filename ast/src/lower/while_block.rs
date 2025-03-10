@@ -15,7 +15,6 @@ impl AstLowerContext {
 		};
 
 		let (mut conditional_units, conditional_value) = self.lower_expression(conditional)?;
-		let first_conditional_unit = *conditional_units.iter().nth(0).unwrap();
 
 		let (mut block_units, _) = self.lower_block(block)?;
 
@@ -23,6 +22,7 @@ impl AstLowerContext {
 
 		let mut units = vec![];
 		units.append(&mut conditional_units);
+
 		units.push(self.unit_store.new_unit(
 			vec![],
 			Transition::GotoIfFalse(
@@ -31,10 +31,7 @@ impl AstLowerContext {
 			),
 		));
 		units.append(&mut block_units);
-		units.push(
-			self.unit_store
-				.new_unit(vec![], Transition::Goto(first_conditional_unit)),
-		);
+		units.push(self.unit_store.new_unit(vec![], Transition::Goto(units[0])));
 		units.push(unit_after);
 
 		Ok((units, None))
