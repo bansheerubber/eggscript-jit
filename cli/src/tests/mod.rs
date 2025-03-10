@@ -1,6 +1,7 @@
-mod recursion;
 mod loops;
 mod math;
+mod misc;
+mod recursion;
 mod setup;
 
 pub use setup::assert_buffer;
