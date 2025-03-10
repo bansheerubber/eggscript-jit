@@ -26,6 +26,7 @@ pub fn configure_pratt() -> PrattParser<Rule> {
 		.op(Op::infix(Rule::less_than_equal_to, Assoc::Left)
 			| Op::infix(Rule::greater_than_equal_to, Assoc::Left))
 		.op(Op::infix(Rule::less_than, Assoc::Left) | Op::infix(Rule::greater_than, Assoc::Left))
+		.op(Op::infix(Rule::shift_left, Assoc::Left) | Op::infix(Rule::shift_right, Assoc::Left))
 		.op(Op::infix(Rule::addition, Assoc::Left) | Op::infix(Rule::subtraction, Assoc::Left))
 		.op(Op::infix(Rule::multiplication, Assoc::Left) | Op::infix(Rule::division, Assoc::Left))
 		.op(Op::prefix(Rule::negative)
