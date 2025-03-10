@@ -218,10 +218,11 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			},
 		};
 
-		return Ok(self
-			.builder
-			.build_int_z_extend(result, self.context.i64_type(), "z_extend_")?
-			.into());
+		let result =
+			self.builder
+				.build_int_z_extend(result, self.context.i64_type(), "z_extend_")?;
+
+		return Ok(self.build_int_to_double_cast(result)?.into());
 	}
 
 	pub fn build_bitwise_and(
@@ -453,9 +454,10 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			},
 		};
 
-		return Ok(self
-			.builder
-			.build_int_z_extend(result, self.context.i64_type(), "z_extend_")?
-			.into());
+		let result =
+			self.builder
+				.build_int_z_extend(result, self.context.i64_type(), "z_extend_")?;
+
+		return Ok(self.build_int_to_double_cast(result)?.into());
 	}
 }

@@ -7,7 +7,7 @@ use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
 use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, PointerValue};
-use inkwell::{context, IntPredicate, OptimizationLevel};
+use inkwell::{context, FloatPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::Path;
@@ -164,13 +164,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
 
-					let value = self.value_to_basic_value.get(&value.id()).unwrap();
 					let then_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
-					let value = self.builder.build_int_compare(
-						IntPredicate::EQ,
-						value.into_int_value(),
-						self.context.i64_type().const_int(1, false),
+					let value = self.builder.build_float_compare(
+						FloatPredicate::OEQ,
+						self.value_to_llvm_float_value(value)?,
+						self.context.f64_type().const_float(1.0),
 						"cast_",
 					)?;
 
@@ -184,13 +183,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder
 						.position_at_end(*self.units_to_blocks.get(&unit.id).unwrap());
 
-					let value = self.value_to_basic_value.get(&value.id()).unwrap();
 					let else_block = self.units_to_blocks.get(&units[i + 1].id).unwrap();
 
-					let value = self.builder.build_int_compare(
-						IntPredicate::EQ,
-						value.into_int_value(),
-						self.context.i64_type().const_int(1, false),
+					let value = self.builder.build_float_compare(
+						FloatPredicate::OEQ,
+						self.value_to_llvm_float_value(value)?,
+						self.context.f64_type().const_float(1.0),
 						"cast_",
 					)?;
 
@@ -408,7 +406,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					BinaryOperator::BitwiseXor => {
 						let result =
 							self.build_bitwise_xor(result_value, left_operand, right_operand)?;
-						
+
 						self.value_to_basic_value.insert(result_value.id(), result);
 					}
 					BinaryOperator::ShiftLeft => {
