@@ -4,8 +4,9 @@ use eggscript_ast::{compile_expression, compile_function, parse_string, Function
 use eggscript_interpreter::{
 	get_native_function_mapping_for_interpreter, Instruction, Interpreter,
 };
-use eggscript_mir::{EggscriptLowerContext, Unit};
+use eggscript_mir::{EggscriptLowerContext, Unit, UnitHandle};
 use eggscript_types::P;
+use indexmap::IndexMap;
 use serde::Serialize;
 use std::ops::Deref;
 
@@ -16,10 +17,10 @@ pub fn instructions_to_vector_string(instructions: &Vec<Instruction>) -> Vec<Str
 		.collect::<Vec<String>>()
 }
 
-pub fn mir_to_vector_string(units: &Vec<Unit>) -> Vec<String> {
+pub fn mir_to_vector_string(units: &IndexMap<UnitHandle, Unit>) -> Vec<String> {
 	let mut result = Vec::new();
 
-	for unit in units.iter() {
+	for unit in units.values() {
 		let block = format!("{}", unit);
 		result.extend(block.split("\n").map(str::to_string));
 	}
@@ -36,7 +37,7 @@ pub fn lower_function(
 	program: P<Program>,
 	function: &P<Function>,
 	debug: bool,
-) -> Result<(Vec<Unit>, Vec<Instruction>)> {
+) -> Result<(IndexMap<UnitHandle, Unit>, Vec<Instruction>)> {
 	let (ast_context, units) = compile_function(
 		function.clone(),
 		program,
@@ -55,7 +56,7 @@ pub fn lower_function(
 			function.id
 		);
 
-		for unit in units.iter() {
+		for unit in units.values() {
 			println!("{}", unit);
 		}
 	}
@@ -167,7 +168,7 @@ pub fn run_eggscript_program(contents: &str, file_name: &str, debug: bool) -> Re
 	let (ast_context, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
 	if debug {
-		for unit in units.iter() {
+		for unit in units.values() {
 			println!("{}", unit);
 		}
 	}

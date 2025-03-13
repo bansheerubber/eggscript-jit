@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use eggscript_interpreter::{Instruction, RelativeStackAddress};
 use eggscript_types::{FunctionType, TypeStore, P};
-use std::collections::HashMap;
+use indexmap::IndexMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
@@ -13,6 +14,7 @@ pub struct EggscriptLowerContext {
 	common_context: CommonContext,
 	jump_instructions: Vec<usize>,
 	unit_to_instruction: HashMap<UnitHandle, usize>,
+	units_containing_phi: HashSet<UnitHandle>,
 	value_to_stack: HashMap<usize, usize>,
 }
 
@@ -23,25 +25,32 @@ impl EggscriptLowerContext {
 			common_context: CommonContext::new(type_store, file_name),
 			jump_instructions: Vec::new(),
 			unit_to_instruction: HashMap::new(),
+			units_containing_phi: HashSet::new(),
 			value_to_stack: HashMap::new(),
 		}
 	}
 
 	pub fn compile_to_eggscript(
 		&mut self,
-		units: &Vec<Unit>,
+		units: &IndexMap<UnitHandle, Unit>,
 		function: Option<FunctionType>,
 	) -> Result<Vec<Instruction>> {
 		self.common_context.build_value_dependencies(&units);
 		self.common_context
 			.type_check_units(&units, function.as_ref())?;
 
+		for unit in units.values() {
+			if unit.starts_with_phi() {
+				self.units_containing_phi.insert(unit.id);
+			}
+		}
+
 		return self.lower_units(units);
 	}
 
-	fn lower_units(&mut self, units: &Vec<Unit>) -> Result<Vec<Instruction>> {
+	fn lower_units(&mut self, units: &IndexMap<UnitHandle, Unit>) -> Result<Vec<Instruction>> {
 		let mut instructions = vec![];
-		for unit in units.iter() {
+		for unit in units.values() {
 			let start = instructions.len();
 			self.unit_to_instruction.insert(unit.id, start);
 			instructions.append(&mut self.lower_unit(unit, start)?);
@@ -63,27 +72,35 @@ impl EggscriptLowerContext {
 
 					instructions[*jump_instruction] = Instruction::Jump(relative_jump);
 				}
-				Instruction::JumpIfFalse(unit_handle, value) => {
+				Instruction::JumpIfFalse(unit_handle, value, push_if_false) => {
 					let index = *unit_handle as usize;
-					let relative_jump = *self
+					let mut relative_jump = *self
 						.unit_to_instruction
 						.get(&index)
-						.context("Could not find unit to jump to")? as isize
-						- *jump_instruction as isize;
+						.context("Could not find unit to jump to")?
+						as isize - *jump_instruction as isize;
+
+					if self.units_containing_phi.contains(&(*unit_handle as usize)) {
+						relative_jump += 2;
+					}
 
 					instructions[*jump_instruction] =
-						Instruction::JumpIfFalse(relative_jump, *value);
+						Instruction::JumpIfFalse(relative_jump, *value, *push_if_false);
 				}
-				Instruction::JumpIfTrue(unit_handle, value) => {
+				Instruction::JumpIfTrue(unit_handle, value, push_if_true) => {
 					let index = *unit_handle as usize;
-					let relative_jump = *self
+					let mut relative_jump = *self
 						.unit_to_instruction
 						.get(&index)
-						.context("Could not find unit to jump to")? as isize
-						- *jump_instruction as isize;
+						.context("Could not find unit to jump to")?
+						as isize - *jump_instruction as isize;
+
+					if self.units_containing_phi.contains(&(*unit_handle as usize)) {
+						relative_jump += 2;
+					}
 
 					instructions[*jump_instruction] =
-						Instruction::JumpIfTrue(relative_jump, *value);
+						Instruction::JumpIfTrue(relative_jump, *value, *push_if_true);
 				}
 				_ => unreachable!("{:?}", instruction),
 			}
@@ -100,6 +117,7 @@ impl EggscriptLowerContext {
 			instructions.append(&mut self.lower_mir(mir)?);
 		}
 
+		// TODO try to remove need for this
 		if unit.mir.len() == 0 {
 			instructions.push(Instruction::Noop);
 		}
@@ -126,7 +144,12 @@ impl EggscriptLowerContext {
 
 				self.jump_instructions
 					.push(instruction_index + instructions.len());
-				instructions.push(Instruction::JumpIfFalse(*position as isize, stack_address));
+
+				instructions.push(Instruction::JumpIfFalse(
+					*position as isize,
+					stack_address,
+					false,
+				));
 			}
 			Transition::GotoIfTrue(position, value) => {
 				let stack_address = match value.deref() {
@@ -146,7 +169,11 @@ impl EggscriptLowerContext {
 				self.jump_instructions
 					.push(instruction_index + instructions.len());
 
-				instructions.push(Instruction::JumpIfTrue(*position as isize, stack_address));
+				instructions.push(Instruction::JumpIfTrue(
+					*position as isize,
+					stack_address,
+					false,
+				));
 			}
 			Transition::Invalid => todo!(),
 			Transition::Next => {}
@@ -266,6 +293,7 @@ impl EggscriptLowerContext {
 					.type_store
 					.lock()
 					.expect("Could not lock type store");
+
 				let function_type = type_store
 					.get_function(name)
 					.expect("Could not find function");
@@ -278,6 +306,28 @@ impl EggscriptLowerContext {
 				{
 					instructions.push(Instruction::Pop);
 				}
+
+				Ok(instructions)
+			}
+			MIRInfo::LogicPhi(_, default, test_value, _, _, _) => {
+				let test_value_stack_address = match test_value.deref() {
+					Value::Location { .. } => *self.value_to_stack.get(&test_value.id()).context(
+						format!("Value {} has not been allocated to stack", test_value.id()),
+					)? as isize,
+					Value::Primitive { .. } => -1,
+					Value::Temp { .. } => -1,
+				};
+
+				let mut instructions = vec![];
+
+				if test_value.is_temp() || test_value.is_primitive() {
+					instructions.push(Instruction::RestorePop);
+				} else {
+					instructions.push(Instruction::Noop); // TODO remove need for this
+				}
+
+				instructions.push(Instruction::JumpIfTrue(2, test_value_stack_address, true));
+				instructions.push(Instruction::Push(default.into()));
 
 				Ok(instructions)
 			}

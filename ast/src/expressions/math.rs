@@ -6,6 +6,7 @@ use eggscript_types::P;
 use pest::iterators::Pair;
 
 use crate::expressions::Expression;
+use crate::operators::LogicOperator;
 use crate::parser::{configure_pratt, Rule};
 use crate::{AstContext, BinaryOperator, Span, UnaryOperator};
 
@@ -48,16 +49,21 @@ impl Expression {
 					)
 				};
 
-				Ok(P::new(Expression {
-					span: Span::new(lhs.span.start(), rhs.span.end()),
-					info: ExpressionInfo::BinaryOperation(
-						lhs,
-						rhs,
-						BinaryOperator::parse_binary(op.as_str())
-							.context("Could not parse binary operator")?,
-					),
-					ty,
-				}))
+				if let Some(operator) = BinaryOperator::parse_binary(op.as_str()) {
+					Ok(P::new(Expression {
+						span: Span::new(lhs.span.start(), rhs.span.end()),
+						info: ExpressionInfo::BinaryOperation(lhs, rhs, operator),
+						ty,
+					}))
+				} else if let Some(operator) = LogicOperator::parse_logic(op.as_str()) {
+					Ok(P::new(Expression {
+						span: Span::new(lhs.span.start(), rhs.span.end()),
+						info: ExpressionInfo::LogicOperation(lhs, rhs, operator),
+						ty,
+					}))
+				} else {
+					unreachable!()
+				}
 			})
 			.parse(pair.into_inner());
 

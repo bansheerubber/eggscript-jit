@@ -23,14 +23,15 @@ impl Value {
 pub enum Instruction {
 	Invalid,
 	Noop,
+	RestorePop,
 	Push(Value),
 	CopyPush(AbsoluteStackAddress),
 	Pop,
 	Store(AbsoluteStackAddress, RelativeStackAddress),
 	Reserve(usize),
 	Jump(isize),
-	JumpIfFalse(isize, RelativeStackAddress),
-	JumpIfTrue(isize, RelativeStackAddress),
+	JumpIfFalse(isize, RelativeStackAddress, bool),
+	JumpIfTrue(isize, RelativeStackAddress, bool),
 	NumberMath(
 		NumberMathOperation,
 		RelativeStackAddress,

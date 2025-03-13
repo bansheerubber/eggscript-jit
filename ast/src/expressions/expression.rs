@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::expressions::Block;
+use crate::operators::LogicOperator;
 use crate::parser::{Program, Rule};
 use crate::{AstContext, BinaryOperator, Ident, Span, UnaryOperator};
 
@@ -33,6 +34,8 @@ pub enum ExpressionInfo {
 	FunctionCall(Ident, Vec<P<Expression>>),
 	/// If or else-if block, with optional continuing else-if/else block
 	If(P<Expression>, P<Block>, Option<P<Expression>>),
+	/// Represents a logic operation (&& or ||)
+	LogicOperation(P<Expression>, P<Expression>, LogicOperator),
 	/// A literal value.
 	Primitive(eggscript_types::Primitive, String),
 	/// Return statement
@@ -43,6 +46,16 @@ pub enum ExpressionInfo {
 	UnaryOperation(P<Expression>, UnaryOperator),
 	/// While loop
 	While(P<Expression>, P<Block>),
+}
+
+impl ExpressionInfo {
+	pub fn is_logic_operation(&self) -> bool {
+		if let ExpressionInfo::LogicOperation(_, _, _) = self {
+			return true;
+		} else {
+			return false;
+		}
+	}
 }
 
 impl Expression {
@@ -82,7 +95,11 @@ impl Expression {
 			type_store,
 		};
 
-		let type_store = context.type_store.lock().expect("Could not lock type store");
+		let type_store = context
+			.type_store
+			.lock()
+			.expect("Could not lock type store");
+
 		let number = type_store
 			.name_to_type_handle("number")
 			.context("Could not get 'number' type")?;

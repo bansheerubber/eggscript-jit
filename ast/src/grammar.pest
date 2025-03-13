@@ -33,7 +33,7 @@ greater_than = { ">" }
 less_than = { "<" }
 greater_than_equal_to = { ">=" }
 less_than_equal_to = { "<=" }
-binary_operator = _{ addition | subtraction | multiplication | division | modulus | bitwise_and | bitwise_or | bitwise_xor | shift_left | shift_right | logical_and | logical_or | equals | not_equals | greater_than_equal_to | less_than_equal_to | greater_than | less_than }
+binary_operator = _{ logical_and | logical_or | addition | subtraction | multiplication | division | modulus | bitwise_and | bitwise_or | bitwise_xor | shift_left | shift_right | equals | not_equals | greater_than_equal_to | less_than_equal_to | greater_than | less_than }
 
 negative = { "-" }
 logical_not = { "!" }

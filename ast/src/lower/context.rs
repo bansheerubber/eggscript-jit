@@ -4,6 +4,7 @@ use eggscript_mir::{
 	Value, ValueStore, MIR,
 };
 use eggscript_types::P;
+use indexmap::IndexMap;
 use inkwell::{builder::Builder, context, module::Module};
 
 use crate::{
@@ -11,7 +12,14 @@ use crate::{
 	Function, Program,
 };
 
+#[derive(Clone)]
+pub struct Logic {
+	pub short_circuit_unit: UnitHandle,
+	pub units_jumping_to_phi: Vec<UnitHandle>,
+}
+
 pub struct AstLowerContext {
+	pub logic_stack: Vec<Logic>,
 	pub program: P<Program>,
 	pub unit_store: UnitStore,
 	pub value_store: ValueStore,
@@ -26,6 +34,7 @@ impl Into<EggscriptLowerContext> for AstLowerContext {
 impl AstLowerContext {
 	pub fn new(program: P<Program>) -> AstLowerContext {
 		AstLowerContext {
+			logic_stack: vec![],
 			program,
 			unit_store: UnitStore::new(),
 			value_store: ValueStore::new(),
@@ -59,6 +68,7 @@ impl AstLowerContext {
 			ExpressionInfo::For(_, _, _, _) => self.lower_for_block(expression),
 			ExpressionInfo::FunctionCall(_, _) => self.lower_function_call(expression),
 			ExpressionInfo::If(_, _, _) => self.lower_if_block(expression),
+			ExpressionInfo::LogicOperation(_, _, _) => self.lower_logic_operation(expression),
 			ExpressionInfo::Primitive(_, _) => self.lower_primitive(expression),
 			ExpressionInfo::Return(_) => self.lower_return_statement(expression),
 			ExpressionInfo::Scope(_) => self.lower_scope(expression),
@@ -82,7 +92,7 @@ pub fn compile_function(
 	function: P<Function>,
 	program: P<Program>,
 	expression: P<Expression>,
-) -> Result<(AstLowerContext, Vec<Unit>)> {
+) -> Result<(AstLowerContext, IndexMap<UnitHandle, Unit>)> {
 	let mut lower_context = AstLowerContext::new(program);
 
 	let mut mir = vec![];
@@ -126,15 +136,17 @@ pub fn compile_function(
 	}
 
 	let units = lower_context.unit_store.take_units(units);
+
 	Ok((lower_context, units))
 }
 
 pub fn compile_expression(
 	program: P<Program>,
 	expression: P<Expression>,
-) -> Result<(AstLowerContext, Vec<Unit>)> {
+) -> Result<(AstLowerContext, IndexMap<UnitHandle, Unit>)> {
 	let mut lower_context = AstLowerContext::new(program);
 	let (units, _) = lower_context.lower_expression(&expression)?;
 	let units = lower_context.unit_store.take_units(units);
+
 	Ok((lower_context, units))
 }

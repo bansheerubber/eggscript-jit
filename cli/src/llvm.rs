@@ -2,8 +2,9 @@ use anyhow::Result;
 use colored::Colorize;
 use eggscript_ast::{compile_expression, compile_function, parse_string, Function, Program};
 use eggscript_interpreter::get_native_function_mapping_for_jit;
-use eggscript_mir::Unit;
+use eggscript_mir::{Unit, UnitHandle};
 use eggscript_types::P;
+use indexmap::IndexMap;
 use inkwell::{
 	builder::Builder,
 	context::Context,
@@ -27,10 +28,10 @@ pub fn llvm_to_vector_string(function: &FunctionValue<'_>) -> Vec<String> {
 	return result;
 }
 
-pub fn mir_to_vector_string(units: &Vec<Unit>) -> Vec<String> {
+pub fn mir_to_vector_string(units: &IndexMap<UnitHandle, Unit>) -> Vec<String> {
 	let mut result = Vec::new();
 
-	for unit in units.iter() {
+	for unit in units.values() {
 		let block = format!("{}", unit);
 		result.extend(block.split("\n").map(str::to_string));
 	}
@@ -49,7 +50,7 @@ pub fn lower_function<'a, 'ctx>(
 	program: P<Program>,
 	function: &P<Function>,
 	debug: bool,
-) -> Result<(Vec<Unit>, FunctionValue<'ctx>)> {
+) -> Result<(IndexMap<UnitHandle, Unit>, FunctionValue<'ctx>)> {
 	let (ast_context, units) = compile_function(
 		function.clone(),
 		program,
@@ -68,7 +69,7 @@ pub fn lower_function<'a, 'ctx>(
 			function.id
 		);
 
-		for unit in units.iter() {
+		for unit in units.values() {
 			println!("{}", unit);
 		}
 	}
@@ -198,7 +199,7 @@ pub fn run_llvm_program(contents: &str, file_name: &str, debug: bool) -> Result<
 	let (ast_context, units) = compile_expression(program.clone(), program.global_scope.clone())?;
 
 	if debug {
-		for unit in units.iter() {
+		for unit in units.values() {
 			println!("{}", unit);
 		}
 	}

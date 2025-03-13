@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use eggscript_types::{FunctionType, KnownTypeInfo, Primitive, Type, TypeHandle, TypeStore, P};
+use indexmap::IndexMap;
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::module::Module;
@@ -14,7 +15,10 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::lower::CommonContext;
-use crate::{BinaryOperator, MIRInfo, PrimitiveValue, Transition, UnaryOperator, Unit, Value, MIR};
+use crate::{
+	BinaryOperator, MIRInfo, PrimitiveValue, Transition, UnaryOperator, Unit, UnitHandle, Value,
+	MIR,
+};
 
 pub struct LlvmLowerContext<'a, 'ctx> {
 	pub(crate) builder: &'a Builder<'ctx>,
@@ -45,7 +49,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 	pub fn compile_to_ir(
 		&mut self,
-		units: &Vec<Unit>,
+		units: &IndexMap<UnitHandle, Unit>,
 		function: Option<FunctionType>,
 	) -> Result<FunctionValue<'ctx>> {
 		self.common_context.build_value_dependencies(&units);
@@ -142,7 +146,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 	fn lower_units(
 		&mut self,
-		units: &Vec<Unit>,
+		units: &IndexMap<UnitHandle, Unit>,
 		function: Option<&FunctionType>,
 	) -> Result<FunctionValue<'ctx>> {
 		let function_name = if let Some(function) = function {
@@ -161,12 +165,13 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			)
 		};
 
-		for unit in units.iter() {
+		for unit in units.values() {
 			self.lower_unit(&unit, llvm_function)?;
 		}
 
+		let units = units.values().collect::<Vec<&Unit>>();
 		for i in 0..units.len() {
-			let unit = &units[i];
+			let unit = units.get(i).expect("Could not get unit");
 			match &unit.transition {
 				Transition::Goto(other) => {
 					self.builder.position_at_end(
@@ -312,13 +317,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			.context
 			.append_basic_block(function, &format!("unit{}", unit.id));
 
+		self.units_to_blocks.insert(unit.id, block);
 		self.builder.position_at_end(block);
 
 		for mir in unit.mir.iter() {
-			self.lower_mir(mir, function)?;
+			self.lower_mir(unit.id, mir, function)?;
 		}
-
-		self.units_to_blocks.insert(unit.id, block);
 
 		Ok(())
 	}
@@ -424,7 +428,12 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 		Ok(())
 	}
 
-	fn lower_mir(&mut self, mir: &MIR, function: FunctionValue<'ctx>) -> Result<()> {
+	fn lower_mir(
+		&mut self,
+		current_unit: UnitHandle,
+		mir: &MIR,
+		function: FunctionValue<'ctx>,
+	) -> Result<()> {
 		match &mir.info {
 			MIRInfo::Allocate(value, argument_position) => {
 				let alloca = self.builder.build_alloca(
@@ -520,7 +529,11 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					args.push(self.maybe_deref_llvm_value(argument)?.into());
 				}
 
-				let type_store = self.common_context.type_store.lock().expect("Could not lock type store");
+				let type_store = self
+					.common_context
+					.type_store
+					.lock()
+					.expect("Could not lock type store");
 				let function_type = type_store
 					.get_function(name)
 					.context("Could not find function")?;
@@ -538,9 +551,63 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					self.builder.build_store(
 						self.value_to_llvm_pointer_value(&return_value)?,
-						llvm_return_value.try_as_basic_value().left().expect("Expected return basic value where there is none")
+						llvm_return_value
+							.try_as_basic_value()
+							.left()
+							.expect("Expected return basic value where there is none"),
 					)?;
 				}
+			}
+			MIRInfo::LogicPhi(
+				result,
+				default,
+				test_value,
+				_,
+				use_default_units,
+				use_value_unit,
+			) => {
+				// TODO type stuff???
+				let phi_result = self.builder.build_phi(self.context.f64_type(), "phi_")?;
+
+				let PrimitiveValue::Number(default) = default;
+
+				for unit in use_default_units {
+					phi_result.add_incoming(&[(
+						&self.context.f64_type().const_float(*default),
+						*self
+							.units_to_blocks
+							.get(unit)
+							.expect("Could not find block"),
+					)]);
+				}
+
+				self.builder.position_at_end(
+					*self
+						.units_to_blocks
+						.get(use_value_unit)
+						.expect("Could not find block"),
+				);
+
+				let value = self.value_to_llvm_float_value(test_value)?;
+
+				self.builder.position_at_end(
+					*self
+						.units_to_blocks
+						.get(&current_unit)
+						.expect("Could not find block"),
+				);
+
+				// TODO type stuff???
+				phi_result.add_incoming(&[(
+					&value,
+					*self
+						.units_to_blocks
+						.get(use_value_unit)
+						.expect("Could not find block"),
+				)]);
+
+				self.value_to_basic_value
+					.insert(result.id(), phi_result.as_basic_value());
 			}
 			MIRInfo::StoreLiteral(value, primitive_value) => {
 				self.alloc_llvm_value(value)?;
@@ -557,7 +624,11 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			MIRInfo::StoreValue(lvalue, rvalue) => {
 				self.alloc_llvm_value(lvalue)?;
 
-				let value = self.value_to_basic_value.get(&rvalue.id()).expect("Could not find basic value");
+				let value = self
+					.value_to_basic_value
+					.get(&rvalue.id())
+					.expect("Could not find basic value");
+
 				let value = if value.is_pointer_value() {
 					self.builder.build_load(
 						self.type_to_llvm_basic_type(rvalue.ty())?,

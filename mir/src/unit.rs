@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
+use indexmap::IndexMap;
 use std::collections::HashMap;
 
-use crate::{Transition, MIR};
+use crate::{MIRInfo, Transition, MIR};
 
 pub type UnitHandle = usize;
 
@@ -29,6 +30,29 @@ impl Unit {
 		self.add_mir(unit.mir);
 		self.transition = unit.transition.clone();
 	}
+
+	pub fn starts_with_phi(&self) -> bool {
+		let Some(mir) = self.mir.first() else {
+			return false;
+		};
+
+		if let MIRInfo::LogicPhi(_, _, _, _, _, _) = mir.info {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	pub fn goto_target(&self) -> Option<UnitHandle> {
+		match self.transition {
+			Transition::Goto(target) => Some(target),
+			Transition::GotoIfFalse(target, _) => Some(target),
+			Transition::GotoIfTrue(target, _) => Some(target),
+			Transition::Invalid => None,
+			Transition::Next => None,
+			Transition::Return(_) => None,
+		}
+	}
 }
 
 impl std::fmt::Display for Unit {
@@ -45,6 +69,7 @@ impl std::fmt::Display for Unit {
 	}
 }
 
+#[derive(Default)]
 pub struct UnitStore {
 	next_unit_id: usize,
 	unit_id_to_unit: HashMap<usize, Unit>,
@@ -52,6 +77,7 @@ pub struct UnitStore {
 
 	/// Key is the target, value is the unit that jumps to that target
 	jump_targets: HashMap<UnitHandle, UnitHandle>,
+	combined_units: HashMap<UnitHandle, UnitHandle>,
 }
 
 impl UnitStore {
@@ -62,6 +88,7 @@ impl UnitStore {
 			units: vec![],
 
 			jump_targets: HashMap::new(),
+			combined_units: HashMap::new(),
 		}
 	}
 
@@ -94,6 +121,10 @@ impl UnitStore {
 
 	pub fn get_unit(&self, unit: &UnitHandle) -> Option<&Unit> {
 		self.unit_id_to_unit.get(unit)
+	}
+
+	pub fn get_unit_mut(&mut self, unit: &UnitHandle) -> Option<&mut Unit> {
+		self.unit_id_to_unit.get_mut(unit)
 	}
 
 	pub fn combine_units(&mut self, units: Vec<UnitHandle>) -> Vec<usize> {
@@ -134,15 +165,20 @@ impl UnitStore {
 				.iter()
 				.nth(0)
 				.expect("Could not get first unit in span");
+
 			for unit_handle in span.iter().skip(1) {
 				let other = self
 					.unit_id_to_unit
 					.remove(&unit_handle)
 					.expect("Could not remove unit");
+
 				let main = self
 					.unit_id_to_unit
 					.get_mut(&parent_unit)
 					.expect("Could not mutate parent unit");
+
+				self.combined_units.insert(other.id, main.id);
+
 				main.combine(other);
 			}
 		}
@@ -158,10 +194,49 @@ impl UnitStore {
 			}
 		}
 
+		// re-write PHI instructions
+		for unit in units.iter() {
+			let unit = self
+				.unit_id_to_unit
+				.get_mut(unit)
+				.expect("Could not find unit");
+
+			for mir in unit.mir.iter_mut() {
+				match &mir.info {
+					MIRInfo::LogicPhi(
+						result,
+						default,
+						test_value,
+						operator,
+						use_default_units,
+						use_value_unit,
+					) => {
+						let new_units = use_default_units
+							.iter()
+							.map(|unit| *self.combined_units.get(unit).unwrap_or(unit))
+							.collect::<Vec<UnitHandle>>();
+
+						mir.info = MIRInfo::LogicPhi(
+							result.clone(),
+							default.clone(),
+							test_value.clone(),
+							operator.clone(),
+							new_units,
+							*self
+								.combined_units
+								.get(use_value_unit)
+								.unwrap_or(use_value_unit),
+						);
+					}
+					_ => {}
+				}
+			}
+		}
+
 		return units;
 	}
 
-	pub fn take_units(&mut self, units: Vec<UnitHandle>) -> Vec<Unit> {
+	pub fn take_units(&mut self, units: Vec<UnitHandle>) -> IndexMap<UnitHandle, Unit> {
 		for unit in self.unit_id_to_unit.values() {
 			if let Some(target) = unit.transition.jump_target() {
 				self.jump_targets.insert(target, unit.id);
@@ -170,13 +245,16 @@ impl UnitStore {
 
 		let units = self.combine_units(units);
 
-		units
-			.iter()
-			.map(|unit_id| {
+		let mut result = IndexMap::new();
+		for unit in units {
+			result.insert(
+				unit,
 				self.unit_id_to_unit
-					.remove(unit_id)
-					.expect("Could not find unit")
-			})
-			.collect::<Vec<Unit>>()
+					.remove(&unit)
+					.expect("Could not find unit"),
+			);
+		}
+
+		return result;
 	}
 }

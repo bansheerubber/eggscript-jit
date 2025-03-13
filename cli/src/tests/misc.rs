@@ -5,7 +5,7 @@ use super::{assert_buffer, run_file_in_interpreter, run_file_in_jit};
 
 #[test]
 #[serial]
-fn recursion1() -> Result<()> {
+fn conditionals() -> Result<()> {
 	let file_contents = include_str!("./test_cases/conditionals.egg");
 	let file_name = "./test_cases/conditionals.egg";
 
@@ -24,6 +24,21 @@ fn recursion1() -> Result<()> {
 		],
 		"jit",
 	);
+
+	Ok(())
+}
+
+#[test]
+#[serial]
+fn logic() -> Result<()> {
+	let file_contents = include_str!("./test_cases/logic.egg");
+	let file_name = "./test_cases/logic.egg";
+
+	run_file_in_interpreter(file_contents, file_name, 1000)?;
+	assert_buffer(vec!["12"], "interpreter");
+
+	run_file_in_jit(file_contents, file_name)?;
+	assert_buffer(vec!["12"], "jit");
 
 	Ok(())
 }

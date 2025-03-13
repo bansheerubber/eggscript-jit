@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 mod lower;
 mod mir;
 mod operators;
@@ -12,6 +14,7 @@ pub use mir::MIRInfo;
 pub use mir::Transition;
 pub use mir::MIR;
 pub use operators::BinaryOperator;
+pub use operators::LogicOperator;
 pub use operators::UnaryOperator;
 pub use primitive::PrimitiveValue;
 pub use span::Span;

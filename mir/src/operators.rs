@@ -98,3 +98,9 @@ impl Into<NumberUnaryOperation> for &UnaryOperator {
 		}
 	}
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum LogicOperator {
+	And,
+	Or
+}

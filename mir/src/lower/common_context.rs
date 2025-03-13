@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
 use eggscript_types::{FunctionType, TypeHandle, TypeStore};
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::{MIRInfo, Span, Transition, Unit};
+use crate::{MIRInfo, Span, Transition, Unit, UnitHandle};
 
 pub struct CommonContext {
 	pub file_name: String,
@@ -22,11 +23,11 @@ impl CommonContext {
 
 	pub fn type_check_units(
 		&mut self,
-		units: &Vec<Unit>,
+		units: &IndexMap<UnitHandle, Unit>,
 		function: Option<&FunctionType>,
 	) -> Result<()> {
 		let type_store = self.type_store.lock().expect("Could not lock type store");
-		for unit in units.iter() {
+		for unit in units.values() {
 			match &unit.transition {
 				Transition::Return(value) => {
 					assert!(function.is_some(), "return found in non-function unit");
@@ -83,17 +84,32 @@ impl CommonContext {
 					}
 					MIRInfo::CallFunction(function_name, _, arguments, _) => {
 						let mut index = 0;
-						let function = type_store.get_function(function_name).expect("Could not get function");
+						let function = type_store
+							.get_function(function_name)
+							.expect("Could not get function");
+
 						for argument in arguments.iter() {
 							self.type_check(
 								&type_store,
 								argument.ty(),
-								*function.argument_types.get(index).expect("Could not get argument type"),
+								*function
+									.argument_types
+									.get(index)
+									.expect("Could not get argument type"),
 								&mir.span,
 								&format!("argument #{} not compatible with value", index),
 							);
 							index += 1;
 						}
+					}
+					MIRInfo::LogicPhi(result, _, test_value, _, _, _) => {
+						self.type_check(
+							&type_store,
+							result.ty(),
+							test_value.ty(),
+							&mir.span,
+							"result not compatible with test value",
+						);
 					}
 					MIRInfo::StoreLiteral(lvalue, rvalue) => {
 						self.type_check(
@@ -136,8 +152,8 @@ impl CommonContext {
 		}
 	}
 
-	pub fn build_value_dependencies(&mut self, units: &Vec<Unit>) {
-		for unit in units.iter() {
+	pub fn build_value_dependencies(&mut self, units: &IndexMap<UnitHandle, Unit>) {
+		for unit in units.values() {
 			for mir in unit.mir.iter() {
 				match &mir.info {
 					MIRInfo::BinaryOperation(lvalue, operand1, operand2, _) => {

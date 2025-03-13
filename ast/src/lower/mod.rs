@@ -4,6 +4,7 @@ mod field_access;
 mod for_block;
 mod function_call;
 mod if_block;
+mod logic;
 mod primitive;
 mod return_statement;
 mod scope;

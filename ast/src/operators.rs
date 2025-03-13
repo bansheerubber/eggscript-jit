@@ -10,8 +10,6 @@ pub enum BinaryOperator {
 	BitwiseXor,
 	ShiftLeft,
 	ShiftRight,
-	LogicalAnd,
-	LogicalOr,
 	Equal,
 	NotEqual,
 	LessThan,
@@ -33,8 +31,6 @@ impl BinaryOperator {
 			"^=" => BinaryOperator::BitwiseXor,
 			"<<=" => BinaryOperator::ShiftLeft,
 			">>=" => BinaryOperator::ShiftRight,
-			"&&=" => BinaryOperator::LogicalAnd,
-			"||=" => BinaryOperator::LogicalOr,
 			"=" => BinaryOperator::Equal,
 			_ => return None,
 		})
@@ -52,8 +48,6 @@ impl BinaryOperator {
 			"^" => BinaryOperator::BitwiseXor,
 			"<<" => BinaryOperator::ShiftLeft,
 			">>" => BinaryOperator::ShiftRight,
-			"&&" => BinaryOperator::LogicalAnd,
-			"||" => BinaryOperator::LogicalOr,
 			"==" => BinaryOperator::Equal,
 			"!=" => BinaryOperator::NotEqual,
 			"<" => BinaryOperator::LessThan,
@@ -78,8 +72,6 @@ impl Into<eggscript_mir::BinaryOperator> for &BinaryOperator {
 			BinaryOperator::BitwiseXor => eggscript_mir::BinaryOperator::BitwiseXor,
 			BinaryOperator::ShiftLeft => eggscript_mir::BinaryOperator::ShiftLeft,
 			BinaryOperator::ShiftRight => eggscript_mir::BinaryOperator::ShiftRight,
-			BinaryOperator::LogicalAnd => eggscript_mir::BinaryOperator::LogicalAnd,
-			BinaryOperator::LogicalOr => eggscript_mir::BinaryOperator::LogicalOr,
 			BinaryOperator::Equal => eggscript_mir::BinaryOperator::Equal,
 			BinaryOperator::NotEqual => eggscript_mir::BinaryOperator::NotEqual,
 			BinaryOperator::LessThan => eggscript_mir::BinaryOperator::LessThan,
@@ -115,5 +107,21 @@ impl Into<eggscript_mir::UnaryOperator> for &UnaryOperator {
 			UnaryOperator::Minus => eggscript_mir::UnaryOperator::Minus,
 			UnaryOperator::Not => eggscript_mir::UnaryOperator::Not,
 		}
+	}
+}
+
+#[derive(Clone, Eq, Debug, PartialEq)]
+pub enum LogicOperator {
+	And,
+	Or,
+}
+
+impl LogicOperator {
+	pub(crate) fn parse_logic(operator: &str) -> Option<LogicOperator> {
+		Some(match operator {
+			"&&" => LogicOperator::And,
+			"||" => LogicOperator::Or,
+			_ => return None,
+		})
 	}
 }

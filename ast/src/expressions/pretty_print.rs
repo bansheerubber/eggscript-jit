@@ -27,7 +27,7 @@ impl Expression {
 				f.write_fmt(format_args!(
 					"{}{} op:'{}'\n",
 					initial_prefix,
-					"BinaryOperator".yellow(),
+					"BinaryOperation".yellow(),
 					format!("{:?}", operator).cyan(),
 				))?;
 
@@ -132,6 +132,17 @@ impl Expression {
 				}
 
 				Ok(())
+			}
+			ExpressionInfo::LogicOperation(left, right, operator) => {
+				f.write_fmt(format_args!(
+					"{}{} op:'{}'\n",
+					initial_prefix,
+					"LogicOperation".yellow(),
+					format!("{:?}", operator).cyan(),
+				))?;
+
+				left.pretty_print(f, &format!("{}|- ", prefix), &format!("{}|  ", prefix))?;
+				right.pretty_print(f, &format!("{}`- ", prefix), &format!("{}|  ", prefix))
 			}
 			ExpressionInfo::Primitive(_, value) => f.write_fmt(format_args!(
 				"{}{} type:'{}', value: '{}'\n",

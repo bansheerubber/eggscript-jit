@@ -37,6 +37,22 @@ impl Value {
 			Value::Temp { ty, .. } => *ty,
 		}
 	}
+
+	pub fn is_temp(&self) -> bool {
+		match self {
+			Value::Location { .. } => false,
+			Value::Primitive { .. } => false,
+			Value::Temp { .. } => true,
+		}
+	}
+
+	pub fn is_primitive(&self) -> bool {
+		match self {
+			Value::Location { .. } => false,
+			Value::Primitive { .. } => true,
+			Value::Temp { .. } => false,
+		}
+	}
 }
 
 pub struct ValueStore {

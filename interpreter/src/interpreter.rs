@@ -168,13 +168,16 @@ impl Interpreter {
 
 				self.number_math(*operator, *lvalue, *rvalue);
 			}
-			Instruction::Invalid => panic!("Invalid instructio"),
+			Instruction::Invalid => panic!("Invalid instruction"),
 			Instruction::Noop => {}
 			Instruction::Push(value) => {
 				self.push_stack(value.clone());
 			}
 			Instruction::CopyPush(position) => {
 				self.push_stack(self.stack[self.stack_base + *position].clone());
+			}
+			Instruction::RestorePop => {
+				self.stack_pointer += 1;
 			}
 			Instruction::Pop => {
 				pop_stack(&self.stack, &mut self.stack_pointer);
@@ -194,28 +197,36 @@ impl Interpreter {
 					.expect("Failed relative jump");
 				return;
 			}
-			Instruction::JumpIfFalse(position, value_position) => {
+			Instruction::JumpIfFalse(position, value_position, push_if_false) => {
 				let value = stack_extract!(self, *value_position);
-				if let Value::Number(value) = value
-					&& value == &0.0
+				if let Value::Number(number) = value
+					&& number == &0.0
 				{
 					self.instruction_index = self
 						.instruction_index
 						.checked_add_signed(*position)
 						.expect("Failed relative jump");
 
+					if *push_if_false {
+						self.push_stack(value.clone());
+					}
+
 					return;
 				}
 			}
-			Instruction::JumpIfTrue(position, value_position) => {
+			Instruction::JumpIfTrue(position, value_position, push_if_true) => {
 				let value = stack_extract!(self, *value_position);
-				if let Value::Number(value) = value
-					&& value != &0.0
+				if let Value::Number(number) = value
+					&& number != &0.0
 				{
 					self.instruction_index = self
 						.instruction_index
 						.checked_add_signed(*position)
 						.expect("Failed relative jump");
+
+					if *push_if_true {
+						self.push_stack(value.clone());
+					}
 
 					return;
 				}

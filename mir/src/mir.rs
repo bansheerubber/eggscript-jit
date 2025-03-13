@@ -1,7 +1,10 @@
 use eggscript_types::P;
 use std::ops::Deref;
 
-use crate::{operators::UnaryOperator, BinaryOperator, PrimitiveValue, Span, UnitHandle, Value};
+use crate::{
+	operators::UnaryOperator, BinaryOperator, LogicOperator, PrimitiveValue, Span, UnitHandle,
+	Value,
+};
 
 const INDENT: &str = "  ";
 
@@ -50,6 +53,30 @@ impl std::fmt::Display for MIR {
 
 				f.write_str(");\n")
 			}
+			MIRInfo::LogicPhi(
+				result,
+				default_value,
+				test_value,
+				operator,
+				use_default_units,
+				use_value_unit,
+			) => {
+				let operator_name = match operator {
+					LogicOperator::And => "and",
+					LogicOperator::Or => "or",
+				};
+
+				f.write_fmt(format_args!(
+					"{}{} = {} phi #{} if {:?}; {} if {};\n",
+					INDENT,
+					result.deref(),
+					operator_name,
+					default_value,
+					use_default_units.as_slice(),
+					test_value.deref(),
+					use_value_unit
+				))
+			}
 			MIRInfo::StoreLiteral(value, primitive_value) => f.write_fmt(format_args!(
 				"{}{} = #{};\n",
 				INDENT,
@@ -89,6 +116,14 @@ pub enum MIRInfo {
 	Allocate(P<Value>, Option<usize>),
 	BinaryOperation(P<Value>, P<Value>, P<Value>, BinaryOperator),
 	CallFunction(String, usize, Vec<P<Value>>, P<Value>),
+	LogicPhi(
+		P<Value>,
+		PrimitiveValue,
+		P<Value>,
+		LogicOperator,
+		Vec<UnitHandle>,
+		UnitHandle,
+	),
 	StoreLiteral(P<Value>, PrimitiveValue),
 	StoreValue(P<Value>, P<Value>),
 	Unary(P<Value>, P<Value>, UnaryOperator),
