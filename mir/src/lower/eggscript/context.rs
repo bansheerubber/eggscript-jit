@@ -118,7 +118,9 @@ impl EggscriptLowerContext {
 		}
 
 		// TODO try to remove need for this
-		if unit.mir.len() == 0 {
+		if let Transition::Next = unit.transition
+			&& unit.mir.len() == 0
+		{
 			instructions.push(Instruction::Noop);
 		}
 
