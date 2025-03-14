@@ -3,6 +3,7 @@ use eggscript_types::{FunctionType, TypeHandle, TypeStore};
 use indexmap::IndexMap;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::usize;
 
 use crate::{MIRInfo, Span, Transition, Unit, UnitHandle};
 
@@ -156,8 +157,35 @@ impl CommonContext {
 
 	pub fn build_value_dependencies(&mut self, units: &IndexMap<UnitHandle, Unit>) {
 		for unit in units.values() {
+			match &unit.transition {
+				Transition::Goto(_) => {}
+				Transition::GotoIfFalse(_, value) => {
+					self.value_used_by
+						.entry(value.id())
+						.or_default()
+						.push(usize::MAX);
+				}
+				Transition::GotoIfTrue(_, value) => {
+					self.value_used_by
+						.entry(value.id())
+						.or_default()
+						.push(usize::MAX);
+				}
+				Transition::Invalid => {}
+				Transition::Next => {}
+				Transition::Return(value) => {
+					if let Some(value) = value {
+						self.value_used_by
+							.entry(value.id())
+							.or_default()
+							.push(usize::MAX);
+					}
+				}
+			}
+
 			for mir in unit.mir.iter() {
 				match &mir.info {
+					MIRInfo::Allocate(_, _) => {}
 					MIRInfo::BinaryOperation(lvalue, operand1, operand2, _) => {
 						self.value_used_by
 							.entry(operand1.id())
@@ -177,6 +205,15 @@ impl CommonContext {
 								.push(result.id());
 						}
 					}
+					MIRInfo::LogicPhi(result, _, units_and_values) => {
+						for (_, value) in units_and_values.iter() {
+							self.value_used_by
+								.entry(value.id())
+								.or_default()
+								.push(result.id());
+						}
+					}
+					MIRInfo::StoreLiteral(_, _) => {}
 					MIRInfo::StoreValue(lvalue, rvalue) => {
 						self.value_used_by
 							.entry(rvalue.id())
@@ -189,7 +226,6 @@ impl CommonContext {
 							.or_default()
 							.push(result.id());
 					}
-					_ => {}
 				}
 			}
 		}

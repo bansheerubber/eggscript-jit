@@ -563,8 +563,17 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 				let phi_result = self.builder.build_phi(self.context.f64_type(), "phi_")?;
 
 				for (unit, value) in units_and_values.iter() {
-					// need to dereference location
-					let float_value = if value.is_location() {
+					let is_pointer_value = if value.is_primitive() {
+						false
+					} else {
+						self.value_to_basic_value
+							.get(&value.id())
+							.expect("Could not find value")
+							.is_pointer_value()
+					};
+
+					// need to dereference pointer
+					let float_value = if is_pointer_value {
 						let block = *self
 							.units_to_blocks
 							.get(unit)
