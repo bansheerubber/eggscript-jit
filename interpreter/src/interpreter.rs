@@ -68,15 +68,17 @@ impl Interpreter {
 		}
 	}
 
-	pub fn run_with_timeout(&mut self, ms: u128) {
+	pub fn run_with_timeout(&mut self, ms: u128) -> Result<(), ()> {
 		let start = Instant::now();
 		while self.instruction_index < self.instructions.len() {
 			self.interpret();
 
 			if start.elapsed().as_millis() > ms {
-				return;
+				return Err(());
 			}
 		}
+
+		Ok(())
 	}
 
 	pub fn print_stack(&self) {

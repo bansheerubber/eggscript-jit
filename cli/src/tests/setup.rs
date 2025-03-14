@@ -59,7 +59,9 @@ pub fn run_file_in_interpreter(contents: &str, file_name: &str, timeout: u128) -
 		}
 	}
 
-	interpreter.run_with_timeout(timeout);
+	if let Err(_) = interpreter.run_with_timeout(timeout) {
+		panic!("interpreter timeout");
+	}
 
 	Ok(())
 }
