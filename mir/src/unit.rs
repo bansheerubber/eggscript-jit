@@ -36,7 +36,7 @@ impl Unit {
 			return false;
 		};
 
-		if let MIRInfo::LogicPhi(_, _, _, _, _, _) = mir.info {
+		if let MIRInfo::LogicPhi(_, _, _) = mir.info {
 			return true;
 		} else {
 			return false;
@@ -203,30 +203,18 @@ impl UnitStore {
 
 			for mir in unit.mir.iter_mut() {
 				match &mir.info {
-					MIRInfo::LogicPhi(
-						result,
-						default,
-						test_value,
-						operator,
-						use_default_units,
-						use_value_unit,
-					) => {
-						let new_units = use_default_units
+					MIRInfo::LogicPhi(result, operator, units_and_values) => {
+						let new_units = units_and_values
 							.iter()
-							.map(|unit| *self.combined_units.get(unit).unwrap_or(unit))
-							.collect::<Vec<UnitHandle>>();
+							.map(|(unit, value)| {
+								(
+									*self.combined_units.get(unit).unwrap_or(unit),
+									value.clone(),
+								)
+							})
+							.collect::<Vec<_>>();
 
-						mir.info = MIRInfo::LogicPhi(
-							result.clone(),
-							default.clone(),
-							test_value.clone(),
-							operator.clone(),
-							new_units,
-							*self
-								.combined_units
-								.get(use_value_unit)
-								.unwrap_or(use_value_unit),
-						);
+						mir.info = MIRInfo::LogicPhi(result.clone(), operator.clone(), new_units);
 					}
 					_ => {}
 				}

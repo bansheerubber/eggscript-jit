@@ -102,14 +102,16 @@ impl CommonContext {
 							index += 1;
 						}
 					}
-					MIRInfo::LogicPhi(result, _, test_value, _, _, _) => {
-						self.type_check(
-							&type_store,
-							result.ty(),
-							test_value.ty(),
-							&mir.span,
-							"result not compatible with test value",
-						);
+					MIRInfo::LogicPhi(result, _, units_and_values) => {
+						for (_, value) in units_and_values.iter() {
+							self.type_check(
+								&type_store,
+								result.ty(),
+								value.ty(),
+								&mir.span,
+								"result not compatible with test value",
+							);
+						}
 					}
 					MIRInfo::StoreLiteral(lvalue, rvalue) => {
 						self.type_check(

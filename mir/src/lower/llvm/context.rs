@@ -558,53 +558,47 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					)?;
 				}
 			}
-			MIRInfo::LogicPhi(
-				result,
-				default,
-				test_value,
-				_,
-				use_default_units,
-				use_value_unit,
-			) => {
+			MIRInfo::LogicPhi(result, _, units_and_values) => {
 				// TODO type stuff???
 				let phi_result = self.builder.build_phi(self.context.f64_type(), "phi_")?;
 
-				let PrimitiveValue::Number(default) = default;
+				for (unit, value) in units_and_values.iter() {
+					// need to dereference location
+					let float_value = if value.is_location() {
+						let block = *self
+							.units_to_blocks
+							.get(unit)
+							.expect("Could not find block");
 
-				for unit in use_default_units {
+						let last_instruction = block.get_last_instruction();
+						if let Some(last_instruction) = last_instruction {
+							self.builder.position_before(&last_instruction);
+						} else {
+							self.builder.position_at_end(block);
+						}
+
+						let float_value = self.value_to_llvm_float_value(value)?;
+
+						self.builder.position_at_end(
+							*self
+								.units_to_blocks
+								.get(&current_unit)
+								.expect("Could not find block"),
+						);
+
+						float_value
+					} else {
+						self.value_to_llvm_float_value(value)?
+					};
+
 					phi_result.add_incoming(&[(
-						&self.context.f64_type().const_float(*default),
+						&float_value,
 						*self
 							.units_to_blocks
 							.get(unit)
 							.expect("Could not find block"),
 					)]);
 				}
-
-				self.builder.position_at_end(
-					*self
-						.units_to_blocks
-						.get(use_value_unit)
-						.expect("Could not find block"),
-				);
-
-				let value = self.value_to_llvm_float_value(test_value)?;
-
-				self.builder.position_at_end(
-					*self
-						.units_to_blocks
-						.get(&current_unit)
-						.expect("Could not find block"),
-				);
-
-				// TODO type stuff???
-				phi_result.add_incoming(&[(
-					&value,
-					*self
-						.units_to_blocks
-						.get(use_value_unit)
-						.expect("Could not find block"),
-				)]);
 
 				self.value_to_basic_value
 					.insert(result.id(), phi_result.as_basic_value());

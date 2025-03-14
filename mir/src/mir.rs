@@ -53,28 +53,23 @@ impl std::fmt::Display for MIR {
 
 				f.write_str(");\n")
 			}
-			MIRInfo::LogicPhi(
-				result,
-				default_value,
-				test_value,
-				operator,
-				use_default_units,
-				use_value_unit,
-			) => {
+			MIRInfo::LogicPhi(result, operator, units_and_values) => {
 				let operator_name = match operator {
 					LogicOperator::And => "and",
 					LogicOperator::Or => "or",
 				};
 
+				let units_and_values = units_and_values
+					.iter()
+					.map(|(unit, value)| format!("({}, {})", unit, value.deref()))
+					.collect::<Vec<_>>();
+
 				f.write_fmt(format_args!(
-					"{}{} = {} phi #{} if {:?}; {} if {};\n",
+					"{}{} = {} phi [{}];\n",
 					INDENT,
 					result.deref(),
 					operator_name,
-					default_value,
-					use_default_units.as_slice(),
-					test_value.deref(),
-					use_value_unit
+					units_and_values.join(", "),
 				))
 			}
 			MIRInfo::StoreLiteral(value, primitive_value) => f.write_fmt(format_args!(
@@ -116,14 +111,7 @@ pub enum MIRInfo {
 	Allocate(P<Value>, Option<usize>),
 	BinaryOperation(P<Value>, P<Value>, P<Value>, BinaryOperator),
 	CallFunction(String, usize, Vec<P<Value>>, P<Value>),
-	LogicPhi(
-		P<Value>,
-		PrimitiveValue,
-		P<Value>,
-		LogicOperator,
-		Vec<UnitHandle>,
-		UnitHandle,
-	),
+	LogicPhi(P<Value>, LogicOperator, Vec<(UnitHandle, P<Value>)>),
 	StoreLiteral(P<Value>, PrimitiveValue),
 	StoreValue(P<Value>, P<Value>),
 	Unary(P<Value>, P<Value>, UnaryOperator),

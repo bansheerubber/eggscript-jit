@@ -41,11 +41,15 @@ impl EggscriptLowerContext {
 
 		for unit in units.values() {
 			if unit.starts_with_phi() {
-				let MIRInfo::LogicPhi(_, _, _, _, default_units, _) = &unit.mir[0].info else {
+				let MIRInfo::LogicPhi(_, _, units_and_values) = &unit.mir[0].info else {
 					unreachable!()
 				};
 
-				let units = default_units.clone();
+				let units = units_and_values
+					.iter()
+					.map(|(unit, _)| *unit)
+					.collect::<Vec<_>>();
+
 				self.units_containing_phi.insert(unit.id, units);
 			}
 		}
@@ -89,7 +93,11 @@ impl EggscriptLowerContext {
 						instructions[*jump_instruction] = Instruction::LogicalAnd(
 							*value,
 							relative_jump,
-							units.last().expect("Could not get last unit") == parent_unit,
+							units
+								.iter()
+								.nth(units.len() - 2)
+								.expect("Could not get last unit")
+								== parent_unit,
 						);
 					} else {
 						instructions[*jump_instruction] =
@@ -309,7 +317,7 @@ impl EggscriptLowerContext {
 
 				Ok(instructions)
 			}
-			MIRInfo::LogicPhi(_, _, _, _, _, _) => Ok(vec![]),
+			MIRInfo::LogicPhi(_, _, _) => Ok(vec![]),
 			MIRInfo::StoreLiteral(lvalue, rvalue) => {
 				let left_stack_address = match lvalue.deref() {
 					Value::Location { .. } => *self.value_to_stack.get(&lvalue.id()).context(

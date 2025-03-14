@@ -15,7 +15,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Logic {
 	pub short_circuit_unit: UnitHandle,
-	pub units_jumping_to_phi: Vec<UnitHandle>,
+	pub units_jumping_to_phi: Vec<(UnitHandle, P<Value>)>,
 }
 
 pub struct AstLowerContext {

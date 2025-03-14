@@ -48,7 +48,12 @@ impl AstLowerContext {
 				Transition::GotoIfFalse(logic.short_circuit_unit, left_value),
 			);
 
-			logic.units_jumping_to_phi.push(left_goto_unit);
+			logic.units_jumping_to_phi.push((
+				left_goto_unit,
+				self.value_store
+					.new_primitive(0, PrimitiveValue::Number(0.0)),
+			));
+
 			units.push(left_goto_unit);
 		}
 
@@ -60,7 +65,12 @@ impl AstLowerContext {
 				Transition::GotoIfFalse(logic.short_circuit_unit, right_value.clone()),
 			);
 
-			logic.units_jumping_to_phi.push(right_goto_unit);
+			logic.units_jumping_to_phi.push((
+				right_goto_unit,
+				self.value_store
+					.new_primitive(0, PrimitiveValue::Number(0.0)),
+			));
+
 			units.push(right_goto_unit);
 		}
 
@@ -78,17 +88,18 @@ impl AstLowerContext {
 					.expect("Could not find 'number' type"),
 			);
 
+			logic
+				.units_jumping_to_phi
+				.push((next_unit, right_value.clone()));
+
 			self.unit_store
 				.get_unit_mut(&logic.short_circuit_unit)
 				.expect("Could not find unit")
 				.add_mir(vec![MIR::new(
 					MIRInfo::LogicPhi(
 						result.clone(),
-						PrimitiveValue::Number(0.0),
-						right_value.clone(),
 						LogicOperator::And,
 						logic.units_jumping_to_phi.clone(),
-						next_unit,
 					),
 					expression.span,
 				)]);
