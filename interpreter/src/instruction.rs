@@ -30,8 +30,8 @@ pub enum Instruction {
 	Store(AbsoluteStackAddress, RelativeStackAddress),
 	Reserve(usize),
 	Jump(isize),
-	JumpIfFalse(isize, RelativeStackAddress, bool),
-	JumpIfTrue(isize, RelativeStackAddress, bool),
+	JumpIfFalse(isize, RelativeStackAddress),
+	JumpIfTrue(isize, RelativeStackAddress),
 	NumberMath(
 		NumberMathOperation,
 		RelativeStackAddress,
@@ -41,6 +41,7 @@ pub enum Instruction {
 	CallFunction(FunctionHandle),
 	Return(bool),
 	NumberUnary(NumberUnaryOperation, RelativeStackAddress),
+	LogicalAnd(RelativeStackAddress, isize, bool),
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use eggscript_interpreter::{Instruction, RelativeStackAddress};
 use eggscript_types::{FunctionType, TypeStore, P};
 use indexmap::IndexMap;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
@@ -12,9 +12,9 @@ use crate::{MIRInfo, Transition, Unit, UnitHandle, Value, MIR};
 pub struct EggscriptLowerContext {
 	allocations: Vec<P<Value>>,
 	common_context: CommonContext,
-	jump_instructions: Vec<usize>,
+	jump_instructions: Vec<(usize, UnitHandle)>,
 	unit_to_instruction: HashMap<UnitHandle, usize>,
-	units_containing_phi: HashSet<UnitHandle>,
+	units_containing_phi: HashMap<UnitHandle, Vec<UnitHandle>>,
 	value_to_stack: HashMap<usize, usize>,
 }
 
@@ -25,7 +25,7 @@ impl EggscriptLowerContext {
 			common_context: CommonContext::new(type_store, file_name),
 			jump_instructions: Vec::new(),
 			unit_to_instruction: HashMap::new(),
-			units_containing_phi: HashSet::new(),
+			units_containing_phi: HashMap::new(),
 			value_to_stack: HashMap::new(),
 		}
 	}
@@ -41,7 +41,12 @@ impl EggscriptLowerContext {
 
 		for unit in units.values() {
 			if unit.starts_with_phi() {
-				self.units_containing_phi.insert(unit.id);
+				let MIRInfo::LogicPhi(_, _, _, _, default_units, _) = &unit.mir[0].info else {
+					unreachable!()
+				};
+
+				let units = default_units.clone();
+				self.units_containing_phi.insert(unit.id, units);
 			}
 		}
 
@@ -56,7 +61,7 @@ impl EggscriptLowerContext {
 			instructions.append(&mut self.lower_unit(unit, start)?);
 		}
 
-		for jump_instruction in self.jump_instructions.iter() {
+		for (jump_instruction, parent_unit) in self.jump_instructions.iter() {
 			let instruction = instructions
 				.get(*jump_instruction)
 				.context("Could not get jump instruction")?;
@@ -72,35 +77,35 @@ impl EggscriptLowerContext {
 
 					instructions[*jump_instruction] = Instruction::Jump(relative_jump);
 				}
-				Instruction::JumpIfFalse(unit_handle, value, push_if_false) => {
+				Instruction::JumpIfFalse(unit_handle, value) => {
 					let index = *unit_handle as usize;
-					let mut relative_jump = *self
+					let relative_jump = *self
 						.unit_to_instruction
 						.get(&index)
-						.context("Could not find unit to jump to")?
-						as isize - *jump_instruction as isize;
+						.context("Could not find unit to jump to")? as isize
+						- *jump_instruction as isize;
 
-					if self.units_containing_phi.contains(&(*unit_handle as usize)) {
-						relative_jump += 2;
+					if let Some(units) = self.units_containing_phi.get(&(*unit_handle as usize)) {
+						instructions[*jump_instruction] = Instruction::LogicalAnd(
+							*value,
+							relative_jump,
+							units.last().expect("Could not get last unit") == parent_unit,
+						);
+					} else {
+						instructions[*jump_instruction] =
+							Instruction::JumpIfFalse(relative_jump, *value);
 					}
-
-					instructions[*jump_instruction] =
-						Instruction::JumpIfFalse(relative_jump, *value, *push_if_false);
 				}
-				Instruction::JumpIfTrue(unit_handle, value, push_if_true) => {
+				Instruction::JumpIfTrue(unit_handle, value) => {
 					let index = *unit_handle as usize;
-					let mut relative_jump = *self
+					let relative_jump = *self
 						.unit_to_instruction
 						.get(&index)
-						.context("Could not find unit to jump to")?
-						as isize - *jump_instruction as isize;
-
-					if self.units_containing_phi.contains(&(*unit_handle as usize)) {
-						relative_jump += 2;
-					}
+						.context("Could not find unit to jump to")? as isize
+						- *jump_instruction as isize;
 
 					instructions[*jump_instruction] =
-						Instruction::JumpIfTrue(relative_jump, *value, *push_if_true);
+						Instruction::JumpIfTrue(relative_jump, *value);
 				}
 				_ => unreachable!("{:?}", instruction),
 			}
@@ -127,7 +132,8 @@ impl EggscriptLowerContext {
 		match &unit.transition {
 			Transition::Goto(position) => {
 				self.jump_instructions
-					.push(instruction_index + instructions.len());
+					.push((instruction_index + instructions.len(), unit.id));
+
 				instructions.push(Instruction::Jump(*position as isize));
 			}
 			Transition::GotoIfFalse(position, value) => {
@@ -145,13 +151,9 @@ impl EggscriptLowerContext {
 				};
 
 				self.jump_instructions
-					.push(instruction_index + instructions.len());
+					.push((instruction_index + instructions.len(), unit.id));
 
-				instructions.push(Instruction::JumpIfFalse(
-					*position as isize,
-					stack_address,
-					false,
-				));
+				instructions.push(Instruction::JumpIfFalse(*position as isize, stack_address));
 			}
 			Transition::GotoIfTrue(position, value) => {
 				let stack_address = match value.deref() {
@@ -169,13 +171,9 @@ impl EggscriptLowerContext {
 				};
 
 				self.jump_instructions
-					.push(instruction_index + instructions.len());
+					.push((instruction_index + instructions.len(), unit.id));
 
-				instructions.push(Instruction::JumpIfTrue(
-					*position as isize,
-					stack_address,
-					false,
-				));
+				instructions.push(Instruction::JumpIfTrue(*position as isize, stack_address));
 			}
 			Transition::Invalid => todo!(),
 			Transition::Next => {}
@@ -311,28 +309,7 @@ impl EggscriptLowerContext {
 
 				Ok(instructions)
 			}
-			MIRInfo::LogicPhi(_, default, test_value, _, _, _) => {
-				let test_value_stack_address = match test_value.deref() {
-					Value::Location { .. } => *self.value_to_stack.get(&test_value.id()).context(
-						format!("Value {} has not been allocated to stack", test_value.id()),
-					)? as isize,
-					Value::Primitive { .. } => -1,
-					Value::Temp { .. } => -1,
-				};
-
-				let mut instructions = vec![];
-
-				if test_value.is_temp() || test_value.is_primitive() {
-					instructions.push(Instruction::RestorePop);
-				} else {
-					instructions.push(Instruction::Noop); // TODO remove need for this
-				}
-
-				instructions.push(Instruction::JumpIfTrue(2, test_value_stack_address, true));
-				instructions.push(Instruction::Push(default.into()));
-
-				Ok(instructions)
-			}
+			MIRInfo::LogicPhi(_, _, _, _, _, _) => Ok(vec![]),
 			MIRInfo::StoreLiteral(lvalue, rvalue) => {
 				let left_stack_address = match lvalue.deref() {
 					Value::Location { .. } => *self.value_to_stack.get(&lvalue.id()).context(

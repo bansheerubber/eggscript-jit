@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use crate::instruction::{Instruction, NumberMathOperation, Value};
-use crate::{Function, NumberUnaryOperation};
+use crate::{Function, NumberUnaryOperation, RelativeStackAddress};
 
 // extract values off of the stack based on isize stack index (negative means pop, positive means index into stack)
 macro_rules! stack_extract {
@@ -199,7 +199,7 @@ impl Interpreter {
 					.expect("Failed relative jump");
 				return;
 			}
-			Instruction::JumpIfFalse(position, value_position, push_if_false) => {
+			Instruction::JumpIfFalse(position, value_position) => {
 				let value = stack_extract!(self, *value_position);
 				if let Value::Number(number) = value
 					&& number == &0.0
@@ -209,14 +209,10 @@ impl Interpreter {
 						.checked_add_signed(*position)
 						.expect("Failed relative jump");
 
-					if *push_if_false {
-						self.push_stack(value.clone());
-					}
-
 					return;
 				}
 			}
-			Instruction::JumpIfTrue(position, value_position, push_if_true) => {
+			Instruction::JumpIfTrue(position, value_position) => {
 				let value = stack_extract!(self, *value_position);
 				if let Value::Number(number) = value
 					&& number != &0.0
@@ -225,10 +221,6 @@ impl Interpreter {
 						.instruction_index
 						.checked_add_signed(*position)
 						.expect("Failed relative jump");
-
-					if *push_if_true {
-						self.push_stack(value.clone());
-					}
 
 					return;
 				}
@@ -309,9 +301,40 @@ impl Interpreter {
 					}
 				}
 			}
+			Instruction::LogicalAnd(value_position, target, final_logic) => {
+				let value = self.peek_stack(*value_position);
+				if let Value::Number(number) = value
+					&& number == &0.0
+				{
+					if value_position < &0 {
+						self.stack_pointer -= 1;
+					}
+
+					self.instruction_index = self
+						.instruction_index
+						.checked_add_signed(*target)
+						.expect("Failed relative jump");
+
+					self.push_stack(Value::Number(0.0));
+
+					return;
+				} else if *final_logic && value_position >= &0 {
+					self.push_stack(value.clone());
+				} else if *final_logic == false && value_position < &0 {
+					self.stack_pointer -= 1;
+				}
+			}
 		}
 
 		self.instruction_index += 1;
+	}
+
+	fn peek_stack(&self, stack_position: RelativeStackAddress) -> &Value {
+		if stack_position < 0 {
+			&self.stack[self.stack_pointer - 1]
+		} else {
+			&self.stack[self.stack_base + stack_position as usize]
+		}
 	}
 
 	fn push_stack(&mut self, value: Value) {
