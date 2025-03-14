@@ -3,6 +3,29 @@
 %c = 3;
 %d = 5;
 %e = 5;
-%test = (%a && %b && %c && %d && %e) + (5 * 2 && %c && 1 + 6) + (1 && 0 && 5);
 
-printNumber(%test);
+%test1 = (%a && %b && %c && %d && %e) + (5 * 2 && %c && 1 + 6) + (1 && 0 && 5);
+printNumber(%test1);
+
+function a(): number {
+	return 5;
+}
+
+function b(): number {
+	return 1;
+}
+
+function c(): number {
+	return 3;
+}
+
+function d(): number {
+	return 5;
+}
+
+function e(): number {
+	return 5;
+}
+
+%test2: number = a() && b() && c() && d() && e();
+printNumber(%test2);
