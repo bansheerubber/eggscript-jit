@@ -119,7 +119,9 @@ impl EggscriptLowerContext {
 			}
 		}
 
-		instructions.insert(0, Instruction::Reserve(self.allocations.len()));
+		if self.allocations.len() != 0 {
+			instructions.insert(0, Instruction::Reserve(self.allocations.len()));
+		}
 
 		Ok(instructions)
 	}
