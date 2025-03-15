@@ -35,10 +35,10 @@ fn logic() -> Result<()> {
 	let file_name = "./test_cases/logic.egg";
 
 	run_file_in_interpreter(file_contents, file_name, 1000)?;
-	assert_buffer(vec!["12", "5"], "interpreter");
+	assert_buffer(vec!["12", "4", "16", "5"], "interpreter");
 
 	run_file_in_jit(file_contents, file_name)?;
-	assert_buffer(vec!["12", "5"], "jit");
+	assert_buffer(vec!["12", "4", "16", "5"], "jit");
 
 	Ok(())
 }

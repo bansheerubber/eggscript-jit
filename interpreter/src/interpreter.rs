@@ -324,6 +324,33 @@ impl Interpreter {
 					self.stack_pointer -= 1;
 				}
 			}
+			Instruction::LogicalOr(value_position, target, final_logic) => {
+				let value = self.peek_stack(*value_position);
+				if let Value::Number(number) = value
+					&& number != &0.0
+				{
+					let value = value.clone();
+
+					self.instruction_index = self
+						.instruction_index
+						.checked_add_signed(*target)
+						.expect("Failed relative jump");
+
+					if value_position >= &0 {
+						self.push_stack(value);
+					}
+
+					return;
+				} else if *final_logic {
+					if value_position < &0 {
+						self.stack_pointer -= 1;
+					}
+
+					self.push_stack(Value::Number(0.0));
+				} else if value_position < &0 {
+					self.stack_pointer -= 1;
+				}
+			}
 		}
 
 		self.instruction_index += 1;

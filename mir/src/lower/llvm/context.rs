@@ -7,7 +7,7 @@ use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
-use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, PointerValue};
+use inkwell::values::{BasicValueEnum, FloatValue, FunctionValue, PhiValue, PointerValue};
 use inkwell::{context, FloatPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -25,6 +25,7 @@ pub struct LlvmLowerContext<'a, 'ctx> {
 	pub(crate) common_context: CommonContext,
 	pub(crate) context: &'ctx context::Context,
 	pub(crate) module: &'a Module<'ctx>,
+	pub(crate) phi_value_for_unit: HashMap<usize, PhiValue<'ctx>>,
 	pub(crate) units_to_blocks: HashMap<usize, BasicBlock<'ctx>>,
 	pub(crate) value_to_basic_value: HashMap<usize, BasicValueEnum<'ctx>>,
 }
@@ -42,6 +43,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			common_context: CommonContext::new(type_store, file_name),
 			context,
 			module,
+			phi_value_for_unit: HashMap::new(),
 			units_to_blocks: HashMap::new(),
 			value_to_basic_value: HashMap::new(),
 		}
@@ -169,9 +171,9 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			self.lower_unit(&unit, llvm_function)?;
 		}
 
-		let units = units.values().collect::<Vec<&Unit>>();
-		for i in 0..units.len() {
-			let unit = units.get(i).expect("Could not get unit");
+		let units_vector = units.values().collect::<Vec<&Unit>>();
+		for i in 0..units_vector.len() {
+			let unit = units_vector.get(i).expect("Could not get unit");
 			match &unit.transition {
 				Transition::Goto(other) => {
 					self.builder.position_at_end(
@@ -198,7 +200,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					let then_block = self
 						.units_to_blocks
-						.get(&units[i + 1].id)
+						.get(&units_vector[i + 1].id)
 						.expect("Could not find 'then' unit");
 
 					let value = self.builder.build_float_compare(
@@ -227,7 +229,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 
 					let else_block = self
 						.units_to_blocks
-						.get(&units[i + 1].id)
+						.get(&units_vector[i + 1].id)
 						.expect("Could not find 'else' unit");
 
 					let value = self.builder.build_float_compare(
@@ -255,7 +257,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 							.expect("Could not find unit"),
 					);
 
-					if i + 1 >= units.len() {
+					if i + 1 >= units_vector.len() {
 						if let Some(function) = function {
 							// TODO fix type issue
 							self.builder.build_return(Some(
@@ -273,7 +275,7 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					self.builder.build_unconditional_branch(
 						*self
 							.units_to_blocks
-							.get(&units[i + 1].id)
+							.get(&units_vector[i + 1].id)
 							.expect("Could not find branch target unit"),
 					)?;
 				}
@@ -296,11 +298,86 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 			}
 		}
 
+		for current_unit in units.values() {
+			if !current_unit.starts_with_phi() {
+				continue;
+			}
+
+			let first_instruction = self
+				.units_to_blocks
+				.get(&current_unit.id)
+				.expect("Could not find block")
+				.get_first_instruction()
+				.expect("Could not get instruction");
+
+			self.builder.position_before(&first_instruction);
+
+			match &current_unit
+				.mir
+				.first()
+				.expect("Could not get first instruction")
+				.info
+			{
+				MIRInfo::LogicPhi(_, _, units_and_values) => {
+					for (unit, value) in units_and_values.iter() {
+						let is_pointer_value = if value.is_primitive() {
+							false
+						} else {
+							self.value_to_basic_value
+								.get(&value.id())
+								.expect("Could not find value")
+								.is_pointer_value()
+						};
+
+						// need to dereference pointer
+						let float_value = if is_pointer_value {
+							let block = *self
+								.units_to_blocks
+								.get(unit)
+								.expect("Could not find block");
+
+							let last_instruction = block.get_last_instruction();
+							if let Some(last_instruction) = last_instruction {
+								self.builder.position_before(&last_instruction);
+							} else {
+								self.builder.position_at_end(block);
+							}
+
+							let float_value = self.value_to_llvm_float_value(value)?;
+
+							self.builder.position_at_end(
+								*self
+									.units_to_blocks
+									.get(&current_unit.id)
+									.expect("Could not find block"),
+							);
+
+							float_value
+						} else {
+							self.value_to_llvm_float_value(value)?
+						};
+
+						self.phi_value_for_unit
+							.get(&current_unit.id)
+							.expect("Could not find phi instruction for unit")
+							.add_incoming(&[(
+								&float_value,
+								*self
+									.units_to_blocks
+									.get(unit)
+									.expect("Could not find block"),
+							)]);
+					}
+				}
+				_ => {}
+			}
+		}
+
 		if function.is_none() {
 			self.builder.position_at_end(
 				*self
 					.units_to_blocks
-					.get(&units.last().expect("Could not get last unit").id)
+					.get(&units_vector.last().expect("Could not get last unit").id)
 					.expect("Could not find unit"),
 			);
 
@@ -558,59 +635,14 @@ impl<'a, 'ctx> LlvmLowerContext<'a, 'ctx> {
 					)?;
 				}
 			}
-			MIRInfo::LogicPhi(result, _, units_and_values) => {
+			MIRInfo::LogicPhi(result, _, _) => {
 				// TODO type stuff???
 				let phi_result = self.builder.build_phi(self.context.f64_type(), "phi_")?;
 
-				for (unit, value) in units_and_values.iter() {
-					let is_pointer_value = if value.is_primitive() {
-						false
-					} else {
-						self.value_to_basic_value
-							.get(&value.id())
-							.expect("Could not find value")
-							.is_pointer_value()
-					};
-
-					// need to dereference pointer
-					let float_value = if is_pointer_value {
-						let block = *self
-							.units_to_blocks
-							.get(unit)
-							.expect("Could not find block");
-
-						let last_instruction = block.get_last_instruction();
-						if let Some(last_instruction) = last_instruction {
-							self.builder.position_before(&last_instruction);
-						} else {
-							self.builder.position_at_end(block);
-						}
-
-						let float_value = self.value_to_llvm_float_value(value)?;
-
-						self.builder.position_at_end(
-							*self
-								.units_to_blocks
-								.get(&current_unit)
-								.expect("Could not find block"),
-						);
-
-						float_value
-					} else {
-						self.value_to_llvm_float_value(value)?
-					};
-
-					phi_result.add_incoming(&[(
-						&float_value,
-						*self
-							.units_to_blocks
-							.get(unit)
-							.expect("Could not find block"),
-					)]);
-				}
-
 				self.value_to_basic_value
 					.insert(result.id(), phi_result.as_basic_value());
+
+				self.phi_value_for_unit.insert(current_unit, phi_result);
 			}
 			MIRInfo::StoreLiteral(value, primitive_value) => {
 				self.alloc_llvm_value(value)?;

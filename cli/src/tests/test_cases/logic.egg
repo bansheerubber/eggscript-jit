@@ -4,9 +4,6 @@
 %d = 5;
 %e = 5;
 
-%test1 = (%a && %b && %c && %d && %e) + (5 * 2 && %c && 1 + 6) + (1 && 0 && 5);
-printNumber(%test1);
-
 function a(): number {
 	return 5;
 }
@@ -20,12 +17,21 @@ function c(): number {
 }
 
 function d(): number {
-	return 5;
+	return 2;
 }
 
 function e(): number {
-	return 5;
+	return 4;
 }
+
+%test1 = (%a && %b && %c && %d && %e) + (5 * 2 && %c && 1 + 6) + (1 && 0 && 5);
+printNumber(%test1);
 
 %test2: number = a() && b() && c() && d() && e();
 printNumber(%test2);
+
+%test3 = (%a || %b || %c || %d || %e) + (5 * 2 || %c || 1 + 6) + (1 || 0 || 5);
+printNumber(%test3);
+
+%test4: number = a() || b() || c() || d() || e();
+printNumber(%test4);

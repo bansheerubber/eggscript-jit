@@ -42,6 +42,7 @@ pub enum Instruction {
 	Return(bool),
 	NumberUnary(NumberUnaryOperation, RelativeStackAddress),
 	LogicalAnd(RelativeStackAddress, isize, bool),
+	LogicalOr(RelativeStackAddress, isize, bool),
 }
 
 #[derive(Clone, Copy, Debug)]

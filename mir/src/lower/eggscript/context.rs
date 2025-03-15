@@ -112,8 +112,20 @@ impl EggscriptLowerContext {
 						.context("Could not find unit to jump to")? as isize
 						- *jump_instruction as isize;
 
-					instructions[*jump_instruction] =
-						Instruction::JumpIfTrue(relative_jump, *value);
+					if let Some(units) = self.units_containing_phi.get(&(*unit_handle as usize)) {
+						instructions[*jump_instruction] = Instruction::LogicalOr(
+							*value,
+							relative_jump,
+							units
+								.iter()
+								.nth(units.len() - 2)
+								.expect("Could not get last unit")
+								== parent_unit,
+						);
+					} else {
+						instructions[*jump_instruction] =
+							Instruction::JumpIfTrue(relative_jump, *value);
+					}
 				}
 				_ => unreachable!("{:?}", instruction),
 			}

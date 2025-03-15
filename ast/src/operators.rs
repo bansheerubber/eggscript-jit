@@ -110,7 +110,7 @@ impl Into<eggscript_mir::UnaryOperator> for &UnaryOperator {
 	}
 }
 
-#[derive(Clone, Eq, Debug, PartialEq)]
+#[derive(Clone, Copy, Eq, Debug, PartialEq)]
 pub enum LogicOperator {
 	And,
 	Or,

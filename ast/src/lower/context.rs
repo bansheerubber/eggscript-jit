@@ -9,11 +9,13 @@ use inkwell::{builder::Builder, context, module::Module};
 
 use crate::{
 	expressions::{Block, Expression, ExpressionInfo},
+	operators::LogicOperator,
 	Function, Program,
 };
 
 #[derive(Clone)]
 pub struct Logic {
+	pub operator: LogicOperator,
 	pub short_circuit_unit: UnitHandle,
 	pub units_jumping_to_phi: Vec<(UnitHandle, P<Value>)>,
 }
