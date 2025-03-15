@@ -50,7 +50,7 @@ impl AstLowerContext {
 		let mut units = vec![];
 		units.append(&mut left_units);
 
-		if !left.info.is_logic_operation() {
+		if !left.info.is_logic_operation() || &left.info.get_logic_operator().unwrap() != operator {
 			if operator == &LogicOperator::And {
 				let left_goto_unit = self.unit_store.new_unit(
 					vec![],
@@ -80,7 +80,8 @@ impl AstLowerContext {
 
 		units.append(&mut right_units);
 
-		if !right.info.is_logic_operation() {
+		if !right.info.is_logic_operation() || &right.info.get_logic_operator().unwrap() != operator
+		{
 			if operator == &LogicOperator::And {
 				let right_goto_unit = self.unit_store.new_unit(
 					vec![],
@@ -129,7 +130,8 @@ impl AstLowerContext {
 			} else {
 				logic.units_jumping_to_phi.push((
 					next_unit,
-					self.value_store.new_primitive(0, PrimitiveValue::Number(0.0)),
+					self.value_store
+						.new_primitive(0, PrimitiveValue::Number(0.0)),
 				));
 			}
 

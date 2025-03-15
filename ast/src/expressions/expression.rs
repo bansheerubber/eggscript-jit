@@ -56,6 +56,14 @@ impl ExpressionInfo {
 			return false;
 		}
 	}
+
+	pub fn get_logic_operator(&self) -> Option<LogicOperator> {
+		if let ExpressionInfo::LogicOperation(_, _, operator) = self {
+			return Some(*operator);
+		} else {
+			return None;
+		}
+	}
 }
 
 impl Expression {

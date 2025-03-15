@@ -35,3 +35,15 @@ printNumber(%test3);
 
 %test4: number = a() || b() || c() || d() || e();
 printNumber(%test4);
+
+%test5 = (%a && %b) || %c;
+printNumber(%test5);
+
+%test6 = 0 || (%a && %b);
+printNumber(%test6);
+
+%test7 = (%a || %b) && %c;
+printNumber(%test7);
+
+%test8 = 1 && (%a || %b);
+printNumber(%test8);
